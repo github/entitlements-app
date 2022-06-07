@@ -1,0 +1,4 @@
+description = This entitlement is expired
+username = russianblue
+username = mainecoon
+expiration = 2001-12-31

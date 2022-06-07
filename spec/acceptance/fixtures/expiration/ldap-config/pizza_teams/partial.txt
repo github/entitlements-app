@@ -1,0 +1,4 @@
+description = Partially expired entitlement
+username = ragamuffin; expiration = 2040-01-01
+username = blackmanx; expiration = 2001-01-01
+username = russianblue

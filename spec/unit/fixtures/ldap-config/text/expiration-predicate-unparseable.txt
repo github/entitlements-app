@@ -1,0 +1,4 @@
+description = Expiration rule testing
+username = blackmanx; expiration = Fluffy Kittens 12345
+username = russianblue; expiration = 2018-03-01
+username = mainecoon

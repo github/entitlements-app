@@ -1,0 +1,6 @@
+description: Group for testing entitlement expiration
+expiration: 2043-01-01
+rules:
+  or:
+    - username: blackmanx
+    - username: nebelung

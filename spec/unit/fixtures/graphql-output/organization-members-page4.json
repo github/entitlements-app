@@ -1,0 +1,17 @@
+{
+  "data": {
+    "organization": {
+      "membersWithRole": {
+        "edges": [
+          {
+            "node": {
+              "login": "peterbald"
+            },
+            "role": "MEMBER",
+            "cursor": "Y3Vyc29yOnYyOpEN"
+          }
+        ]
+      }
+    }
+  }
+}

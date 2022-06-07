@@ -1,0 +1,1 @@
+V	371116214418Z		1000	unknown	/C=US/ST=California/O=GitHub, Inc./OU=entitlements app acceptance test CA/CN=intermediate-ca.github

@@ -1,0 +1,31 @@
+{
+  "data": {
+    "organization": {
+      "membersWithRole": {
+        "edges": [
+          {
+            "node": {
+              "login": "monalisa"
+            },
+            "role": "ADMIN",
+            "cursor": "Y3Vyc29yOnYyOpEB"
+          },
+          {
+            "node": {
+              "login": "ocicat"
+            },
+            "role": "MEMBER",
+            "cursor": "Y3Vyc29yOnYyOpEF"
+          },
+          {
+            "node": {
+              "login": "blackmanx"
+            },
+            "role": "MEMBER",
+            "cursor": "Y3Vyc29yOnYyOpEG"
+          }
+        ]
+      }
+    }
+  }
+}

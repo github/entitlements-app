@@ -1,0 +1,3 @@
+dn: ou=People,dc=kittens,dc=net
+objectClass: organizationalUnit
+ou: people

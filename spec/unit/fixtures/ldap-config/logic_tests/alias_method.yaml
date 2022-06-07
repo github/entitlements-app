@@ -1,0 +1,4 @@
+---
+description: An alias method
+rules:
+  entitlements_group: pizza_teams/from_username

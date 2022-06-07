@@ -1,0 +1,6 @@
+# Multiple filtering keys
+description = Example
+  management = MAINECOON # Example
+
+group = cn=chickens,ou=Poultry,dc=kittens,dc=net
+username = BlackManx

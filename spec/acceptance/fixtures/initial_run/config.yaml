@@ -1,0 +1,75 @@
+---
+backends:
+  dockerized-ldap:
+    ldap_binddn: <%= ENV["LDAP_BINDDN"] %>
+    ldap_bindpw: <%= ENV["LDAP_BINDPW"] %>
+    ldap_uri: <%= ENV["LDAP_URI"] %>
+    person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+    type: ldap
+configuration_path: ./ldap-config
+extras:
+  ldap_group: {}
+  orgchart:
+    manager_map_file: ../common/manager-map.yaml
+filters:
+  contractors:
+    class: Entitlements::Data::Groups::Calculated::Filters::MemberOfGroup
+    config:
+      group: internal/contractors
+  pre-hires:
+    class: Entitlements::Data::Groups::Calculated::Filters::MemberOfGroup
+    config:
+      group: internal/pre-hires
+
+groups:
+  dummy-ou:
+    type: dummy
+  dummy-ou-renamed:
+    type: dummy
+    dir: dummy-ou-special
+  entitlements:
+    backend: dockerized-ldap
+    base: ou=Entitlements,ou=Groups,dc=kittens,dc=net
+  entitlements/foo-bar-app:
+    backend: dockerized-ldap
+    base: ou=foo-bar-app,ou=Entitlements,ou=Groups,dc=kittens,dc=net
+    create_if_missing: true
+  entitlements/groupofnames:
+    backend: dockerized-ldap
+    base: ou=GroupOfNames,ou=Entitlements,ou=Groups,dc=kittens,dc=net
+    plugin:
+      file: group_of_names.rb
+      class: GroupOfNames
+    create_if_missing: true
+  entitlements/mirror:
+    backend: dockerized-ldap
+    base: ou=Mirror,ou=Entitlements,ou=Groups,dc=kittens,dc=net
+    mirror: entitlements/groupofnames
+    create_if_missing: true
+    plugin:
+      file: posix_group.rb
+      class: PosixGroup
+  internal:
+    type: dummy
+    dir: ../../common/internal
+  memberof:
+    memberof_attribute: shellentitlements
+    backend: dockerized-ldap
+    type: member_of
+    ou:
+      - entitlements/groupofnames
+  pizza_teams:
+    backend: dockerized-ldap
+    base: ou=Pizza_Teams,ou=Groups,dc=kittens,dc=net
+people:
+  ldap:
+    type: ldap
+    config:
+      base: ou=People,dc=kittens,dc=net
+      ldap_binddn: <%= ENV["LDAP_BINDDN"] %>
+      ldap_bindpw: <%= ENV["LDAP_BINDPW"] %>
+      ldap_uri: <%= ENV["LDAP_URI"] %>
+      person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+      additional_attributes:
+        - shellentitlements
+people_data_source: ldap

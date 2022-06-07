@@ -1,0 +1,41 @@
+version: '2'
+
+networks:
+  ldap-network:
+    internal: true
+
+services:
+  entitlements:
+    build:
+      context: "${DIR}"
+      dockerfile: "spec/acceptance/Dockerfile.entitlements"
+    networks:
+      ldap-network:
+        aliases:
+          - entitlements.fake
+    volumes:
+      - "${DIR}/spec/acceptance:/acceptance:ro"
+      - "${DIR}/vendor/container-gems:/data/entitlements/vendor/gems:rw"
+  git-server:
+    entrypoint: /acceptance/git-server/run-server.sh
+    image: jkarlos/git-server-docker
+    networks:
+      ldap-network:
+        aliases:
+          - git-server.fake
+    ports:
+      - "127.0.0.1:22:22"
+    volumes:
+      - "${DIR}/spec/acceptance:/acceptance:ro"
+      - "${DIR}/spec/acceptance/git-server/keys:/git-server/keys:ro"
+  ldap-server:
+    entrypoint: /acceptance/ldap-server/run-server.sh
+    image: osixia/openldap:1.2.2
+    networks:
+      ldap-network:
+        aliases:
+          - ldap-server.fake
+    ports:
+      - "127.0.0.1:636:636"
+    volumes:
+      - "${DIR}/spec/acceptance:/acceptance:ro"

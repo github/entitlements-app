@@ -1,0 +1,4 @@
+---
+description: Test fixture for the direct report test for a non-manager
+rules:
+  direct_report: BlackManx

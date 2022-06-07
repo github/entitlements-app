@@ -1,0 +1,33 @@
+dn: uid=serengeti,ou=People,dc=kittens,dc=net
+cn: serengeti
+displayname: serengeti
+employeenumber: 000004
+gecos: serengeti
+gidnumber: 100
+givenname: serengeti
+homedirectory: /home/serengeti
+loginshell: /bin/bash
+mail: serengeti@kittens.net
+manager: uid=balinese,ou=People,dc=kittens,dc=net
+objectclass: top
+objectclass: person
+objectclass: organizationalPerson
+objectclass: inetOrgPerson
+objectclass: posixAccount
+objectclass: simpleSecurityObject
+objectclass: shadowAccount
+objectclass: entitlementsUser
+postaladdress: 123 Cuddle Drive, Purrville CA 12345
+postalcode: 12345
+shadowinactive: 15
+shadowlastchange: 16252
+shadowmax: 120
+shadowmin: 0
+shadowwarning: 15
+sn: serengeti
+street: 123 Cuddle Drive
+telephonenumber: +12005551212
+uid: serengeti
+uidnumber: 20247
+userpassword:: e0JDUllQVH0kMmEkMTAkMTdIazZxSExIanM5a2JyMkN0WUk4T1pLUkZQa3ZQ
+ WWRtWEE1dFNiSUxKVzNxTU1DU2VEQ08=

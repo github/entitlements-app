@@ -1,0 +1,110 @@
+---
+balinese:
+  status:
+  - employee
+  manager: peterbald
+bengal:
+  status:
+  - employee
+  manager: balinese
+chartreux:
+  status:
+  - pre-hire
+  manager: bengal
+dwelf:
+  status:
+  - contractor
+  - pre-hire
+  manager: bengal
+desertlynx:
+  status:
+  - employee
+  manager: bengal
+bobtail:
+  status:
+  - employee
+  manager: bengal
+germanrex:
+  status:
+  - employee
+  manager: bengal
+korat:
+  status:
+  - employee
+  manager: balinese
+minskin:
+  status:
+  - employee
+  manager: balinese
+mainecoon:
+  status:
+  - employee
+  manager: balinese
+ragamuffin:
+  status:
+  - employee
+  manager: mainecoon
+blackmanx:
+  status:
+  - employee
+  manager: mainecoon
+russianblue:
+  status:
+  - employee
+  manager: mainecoon
+pixiebob:
+  status:
+  - contractor
+  manager: balinese
+peterbald:
+  status:
+  - employee
+  manager: orientallonghair
+orientallonghair:
+  status:
+  - employee
+  manager: napoleon
+napoleon:
+  status:
+  - employee
+  manager: napoleon
+ojosazules:
+  status:
+  - employee
+  manager: donskoy
+nebelung:
+  status:
+  - employee
+  manager: ojosazules
+khaomanee:
+  status:
+  - employee
+  manager: ojosazules
+cyprus:
+  status:
+  - employee
+  manager: ojosazules
+cheetoh:
+  status:
+  - employee
+  manager: ojosazules
+chausie:
+  status:
+  - employee
+  manager: ojosazules
+donskoy:
+  status:
+  - employee
+  manager: foldex
+foldex:
+  status:
+  - employee
+  manager: orientallonghair
+oregonrex:
+  status:
+  - employee
+  manager: donskoy
+serengeti:
+  status:
+  - contractor
+  manager: balinese

@@ -1,0 +1,19 @@
+/.bundle
+/vendor/gems
+
+# Ignore binstubs but do commit the one specific for this code.
+bin/*
+!bin/deploy-entitlements
+
+# There's a place for local caching of container gems to make local builds faster.
+# Keep the .keep file but not the gems themselves
+vendor/container-gems/*
+!vendor/container-gems/.keep
+
+# Coverage reports
+coverage/*
+
+.*.swp
+
+# Ignore JetBrains IDEs
+.idea

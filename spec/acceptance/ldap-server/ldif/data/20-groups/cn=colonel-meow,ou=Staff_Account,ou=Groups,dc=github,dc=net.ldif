@@ -1,0 +1,12 @@
+dn: cn=colonel-meow,ou=Staff_Account,ou=Groups,dc=kittens,dc=net
+cn: colonel-meow
+description: Colonel Meow
+objectclass: groupOfUniqueNames
+owner: cn=colonel-meow,ou=Staff_Account,ou=Groups,dc=kittens,dc=net
+owner: cn=org-eng-sec-it,ou=Groups,dc=kittens,dc=net
+uniquemember: uid=NEBELUNg,ou=People,dc=kittens,dc=net
+uniquemember: uid=khaomanee,ou=People,dc=kittens,dc=net
+uniquemember: uid=russianblue,ou=People,dc=kittens,dc=net
+uniquemember: uid=cheetoh,ou=People,dc=kittens,dc=net
+uniquemember: uid=cyprus,ou=People,dc=kittens,dc=net
+uniquemember: uid=oJosazuLEs,ou=People,dc=kittens,dc=net

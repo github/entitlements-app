@@ -1,0 +1,2 @@
+V	280227214747Z		1000	unknown	/C=US/ST=California/L=San Francisco/O=GitHub, Inc./OU=entitlements app acceptance test CA/CN=ldap-server.fake
+V	280801160158Z		1001	unknown	/C=US/ST=California/L=San Francisco/O=GitHub Inc./OU=Entitlements App/CN=github.fake

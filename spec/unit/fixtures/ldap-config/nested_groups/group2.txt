@@ -1,0 +1,3 @@
+description = Nested groups test
+group = nested_groups/group4
+username = foldex

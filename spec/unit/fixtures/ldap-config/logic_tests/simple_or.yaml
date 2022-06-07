@@ -1,0 +1,6 @@
+---
+description: Simple "or" check
+rules:
+  or:
+    - username: RAGAMUFFIn
+    - username: BlackManx

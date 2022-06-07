@@ -1,0 +1,3 @@
+---
+rules:
+  ldap_group: cn=colonel-meow,ou=Staff_Account,ou=Groups,dc=kittens,dc=net

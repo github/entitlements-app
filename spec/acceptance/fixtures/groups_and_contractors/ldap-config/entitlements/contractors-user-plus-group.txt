@@ -1,0 +1,3 @@
+contractors = pizza_teams/pixiebob
+contractors = serengeti
+group = pizza_teams/garfield-mixed-filter

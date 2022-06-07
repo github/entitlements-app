@@ -1,0 +1,6 @@
+username = blackmanx
+username = mainecoon
+username = serengeti
+username = pixiebob
+contractors = pixiebob; expiration = 2050-01-01
+contractors = serengeti; expiration = 2050-01-01

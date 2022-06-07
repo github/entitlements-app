@@ -1,0 +1,28 @@
+{
+  "data": {
+    "organization": {
+      "pendingMembers": {
+        "edges": [
+          {
+            "node": {
+              "login": "alice"
+            },
+            "cursor": "Y3Vyc29yOnYyOpEB"
+          },
+          {
+            "node": {
+              "login": "bob"
+            },
+            "cursor": "Y3Vyc29yOnYyOpEF"
+          },
+          {
+            "node": {
+              "login": "charles"
+            },
+            "cursor": "Y3Vyc29yOnYyOpEG"
+          }
+        ]
+      }
+    }
+  }
+}

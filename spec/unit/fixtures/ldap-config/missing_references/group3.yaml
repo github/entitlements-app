@@ -1,0 +1,4 @@
+---
+description: Missing reference tests
+rules:
+  group: missing_references/group4

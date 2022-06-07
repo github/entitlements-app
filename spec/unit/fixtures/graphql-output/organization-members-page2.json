@@ -1,0 +1,31 @@
+{
+  "data": {
+    "organization": {
+      "membersWithRole": {
+        "edges": [
+          {
+            "node": {
+              "login": "toyger"
+            },
+            "role": "MEMBER",
+            "cursor": "Y3Vyc29yOnYyOpEH"
+          },
+          {
+            "node": {
+              "login": "highlander"
+            },
+            "role": "MEMBER",
+            "cursor": "Y3Vyc29yOnYyOpEI"
+          },
+          {
+            "node": {
+              "login": "RussianBlue"
+            },
+            "role": "MEMBER",
+            "cursor": "Y3Vyc29yOnYyOpEJ"
+          }
+        ]
+      }
+    }
+  }
+}

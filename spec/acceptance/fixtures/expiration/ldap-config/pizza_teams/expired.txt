@@ -1,0 +1,5 @@
+description = Expired entitlement
+expiration = 2001-01-01
+username = germanrex
+username = khaomanee
+username = napoleon

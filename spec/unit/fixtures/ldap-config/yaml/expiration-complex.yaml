@@ -1,0 +1,21 @@
+description: Expiration rule testing
+rules:
+  or:
+    - username: peterbald
+    - and:
+      - group: foo/bar
+        expiration: "2018-09-01"
+      - group: foo/baz
+        expiration: "2018-03-01"
+    - or:
+      - username: blackmanx
+        expiration: "2018-03-01"
+      - username: russianblue
+        expiration: "2018-03-01"
+      - username: mainecoon
+        expiration: "2018-03-01"
+    - or:
+      - username: cheetoh
+        expiration: "2018-03-01"
+      - username: nebelung
+        expiration: "2018-09-01"

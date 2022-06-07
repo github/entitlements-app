@@ -1,0 +1,2 @@
+description = An alias method
+entitlements_group = pizza_teams/from_username

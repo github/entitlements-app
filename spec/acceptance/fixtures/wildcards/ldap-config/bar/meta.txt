@@ -1,0 +1,2 @@
+description = Meta example group
+group = bar/t*

@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+cd "$(dirname "$0")/.."
+docker build -t entitlements -f spec/acceptance/Dockerfile.entitlements .
+docker run -w "/data/entitlements/" entitlements \
+  bash -c "script/bootstrap && bin/rubocop "$@" lib/ spec/"

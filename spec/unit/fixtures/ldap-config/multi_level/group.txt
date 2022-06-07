@@ -1,0 +1,2 @@
+description = A test group at the top level
+group = multi_level/child_ou/group

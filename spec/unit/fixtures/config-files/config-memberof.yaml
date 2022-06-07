@@ -1,0 +1,28 @@
+# Configuration file for the entitlements app.
+---
+configuration_path: ./ldap-config
+groups:
+  ou_one:
+    type: dummy
+  ou_two:
+    base: ou=pizza_teams,ou=Groups,dc=kittens,dc=net
+    ldap_uri: ldaps://ldap.example.net
+    ldap_binddn: uid=binder,ou=People,dc=example,dc=net
+    ldap_bindpw: s3cr3t
+    person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+    type: ldap
+  memberof:
+    ldap_uri: ldaps://ldap.example.net
+    ldap_binddn: uid=binder,ou=People,dc=example,dc=net
+    ldap_bindpw: s3cr3t
+    memberof_attribute: chickenEntitlements
+    ou:
+      - ou_two
+    person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+    type: member_of
+people:
+  yaml:
+    type: yaml
+    filename: people.yaml
+    person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+people_data_source: yaml

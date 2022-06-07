@@ -1,0 +1,148 @@
+dn: cn=githubiam,cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: githubiam
+olcAttributeTypes: ( 1.3.6.1.4.1.43558.389.1.1.1
+  NAME 'githubDotcomId'
+  DESC 'GitHubUsername'
+  EQUALITY caseIgnoreMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+  SINGLE-VALUE )
+olcAttributeTypes: ( 1.3.6.1.4.1.43558.389.1.1.2
+  NAME 'campfireId'
+  DESC 'campfireID'
+  EQUALITY integerMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+  SINGLE-VALUE )
+olcAttributeTypes: ( 1.3.6.1.4.1.43558.389.1.1.4
+  NAME 'slackId'
+  DESC 'Slack ID'
+  EQUALITY caseIgnoreMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+  SINGLE-VALUE )
+olcAttributeTypes: ( 1.3.6.1.4.1.43558.389.1.1.5
+  NAME 'amazonResourceName'
+  DESC 'Amazon Resource Name (ARN) of user.'
+  EQUALITY caseIgnoreMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+olcAttributeTypes: ( 1.3.6.1.4.1.43558.389.1.1.6
+  NAME 'pagerDutyEmail'
+  DESC 'email address used on PagerDuty'
+  EQUALITY caseIgnoreIA5Match
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.26
+  SINGLE-VALUE )
+olcAttributeTypes: ( 1.3.6.1.4.1.43558.389.1.1.7
+  NAME 'herokuEmail'
+  DESC 'email address used on Heroku'
+  EQUALITY caseIgnoreIA5Match
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.26
+  SINGLE-VALUE )
+olcAttributeTypes: ( 1.3.6.1.4.1.43558.389.1.1.8
+  NAME 'bluejeansEmail'
+  DESC 'email address used on bluejeans'
+  EQUALITY caseIgnoreIA5Match
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.26
+  SINGLE-VALUE )
+olcAttributeTypes: ( 1.3.6.1.4.1.43558.389.1.1.9
+  NAME 'yubikeyId'
+  DESC 'first 12 characters of yubikey OTP'
+  EQUALITY caseIgnoreIA5Match
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
+olcAttributeTypes: ( 1.3.6.1.4.1.43558.389.1.1.10
+  NAME 'shellEntitlements'
+  DESC 'DNs of shell entitlements groups the user belongs to'
+  EQUALITY distinguishedNameMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 )
+olcAttributeTypes: ( 1.3.6.1.4.1.43558.389.1.1.11
+  NAME 'country'
+  DESC 'Friendly name of the country the person lives in'
+  EQUALITY caseIgnoreMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+  SINGLE-VALUE )
+olcAttributeTypes: ( 1.3.6.1.4.1.43558.389.1.1.12
+  NAME 'msftAlias'
+  DESC 'Microsoft Alias'
+  EQUALITY caseIgnoreMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+  SINGLE-VALUE )
+olcAttributeTypes: ( 1.3.6.1.4.1.43558.389.1.1.13
+  NAME 'costCenterHierarchy'
+  DESC 'Cost Center Hierarchy'
+  EQUALITY caseIgnoreMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+  SINGLE-VALUE )
+olcAttributeTypes: ( 1.3.6.1.4.1.43558.389.1.1.14
+  NAME 'costCenter'
+  DESC 'Cost Center'
+  EQUALITY caseIgnoreMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+  SINGLE-VALUE )
+olcAttributeTypes: ( 1.3.6.1.4.1.43558.389.1.1.15
+  NAME 'managerDotcomId'
+  DESC 'Manager dotcom ID'
+  EQUALITY caseIgnoreMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+  SINGLE-VALUE )
+olcObjectClasses:  ( 1.3.6.1.4.1.43558.389.1.2.1
+  NAME 'githubDotcomUser'
+  DESC 'A GitHub User Account'
+  SUP top
+  AUXILIARY
+  MUST githubDotcomId )
+olcObjectClasses:  ( 1.3.6.1.4.1.43558.389.1.2.2
+  NAME 'campfireUser'
+  DESC 'A Camfire User Account'
+  SUP top AUXILIARY
+  MUST campfireId )
+olcObjectClasses:  ( 1.3.6.1.4.1.43558.389.1.2.4
+  NAME 'slackUser'
+  DESC 'Slack account user attributes'
+  SUP top
+  AUXILIARY
+  MUST slackId )
+olcObjectClasses:  ( 1.3.6.1.4.1.43558.389.1.2.5
+  NAME 'amazonWSUser'
+  DESC 'Amazon Web Services User'
+  SUP top
+  AUXILIARY
+  MUST amazonResourceName )
+olcObjectClasses:  ( 1.3.6.1.4.1.43558.389.1.2.6
+  NAME 'pagerDutyUser'
+  DESC 'PagerDuty User'
+  SUP top
+  AUXILIARY
+  MUST pagerDutyEmail )
+olcObjectClasses:  ( 1.3.6.1.4.1.43558.389.1.2.7
+  NAME 'herokuUser'
+  DESC 'Heroku User'
+  SUP top
+  AUXILIARY
+  MUST herokuEmail )
+olcObjectClasses:  ( 1.3.6.1.4.1.43558.389.1.2.8
+  NAME 'blujeansUser'
+  DESC 'Bluejeans User'
+  SUP top AUXILIARY
+  MUST bluejeansEmail )
+olcObjectClasses:  ( 1.3.6.1.4.1.43558.389.1.2.9
+  NAME 'yubikeyUser'
+  DESC 'Yubikey User'
+  SUP top
+  AUXILIARY
+  MUST yubikeyId )
+olcObjectClasses:  ( 1.3.6.1.4.1.43558.389.1.2.10
+  NAME 'entitlementsUser'
+  DESC 'Entitlements User'
+  SUP top
+  AUXILIARY
+  MAY shellEntitlements )
+olcObjectClasses:  ( 1.3.6.1.4.1.43558.389.1.2.11
+  NAME 'countryPerson'
+  DESC 'A Person who lives in a Country'
+  SUP top
+  AUXILIARY
+  MAY country )
+olcObjectClasses: ( 1.3.6.1.4.1.43558.389.2.2.1
+  NAME 'githubPerson'
+  DESC 'A Hubber (or contractor)'
+  SUP top
+  AUXILIARY
+  MAY (msftAlias $ country $ costCenterHierarchy $ costCenter $ managerDotcomId))

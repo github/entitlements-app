@@ -1,0 +1,7 @@
+description = Multiple contractors in here
+username = PixiEbob
+username = serengeti
+username = russianblue
+username = RagaMuffin
+contractors = pixiEBOB
+contractors = SErengeti

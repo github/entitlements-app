@@ -1,0 +1,6 @@
+---
+description: Nested groups test
+rules:
+  or:
+    - group: nested_groups/group2
+    - group: nested_groups/group3

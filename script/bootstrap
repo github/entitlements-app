@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -e
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
+cd "$DIR"
+
+export PATH=/usr/share/rbenv/shims:$PATH
+export RBENV_VERSION="$(cat .ruby-version)"
+rm -rf "${DIR}/.bundle"
+
+# Using Deprecated Flags to avoid pulling from upstream
+bundle install --path vendor/gems --local --clean
+
+bundle binstubs rake rspec-core rubocop

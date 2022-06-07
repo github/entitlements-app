@@ -1,0 +1,4 @@
+---
+description: Invoke a managed LDAP group
+rules:
+  group: pizza_teams/from_username

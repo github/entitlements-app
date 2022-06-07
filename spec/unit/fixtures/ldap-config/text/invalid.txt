@@ -1,0 +1,2 @@
+description: Example
+management = MAINECOON # Example

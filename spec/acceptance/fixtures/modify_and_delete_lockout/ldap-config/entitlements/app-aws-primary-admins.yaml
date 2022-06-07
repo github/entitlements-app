@@ -1,0 +1,5 @@
+---
+description: Admin access to primary AWS account
+rules:
+  or:
+    - group: pizza_teams/colonel-meow

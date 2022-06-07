@@ -1,0 +1,109 @@
+---
+balinese:
+  dn: uid=balinese,ou=People,dc=kittens,dc=net
+  githubdotcomid: balinese
+  manager: peterbald
+bengal:
+  dn: uid=bengal,ou=People,dc=kittens,dc=net
+  githubdotcomid: bengal
+  manager: balinese
+chartreux:
+  dn: uid=chartreux,ou=People,dc=kittens,dc=net
+  githubdotcomid: chartreux
+  manager: bengal
+DwelF:
+  dn: uid=DwelF,ou=People,dc=kittens,dc=net
+  githubdotcomid: DwelF
+  manager: bengal
+desertlynx:
+  dn: uid=desertlynx,ou=People,dc=kittens,dc=net
+  githubdotcomid: desertlynx
+  manager: bengal
+bobtail:
+  dn: uid=bobtail,ou=People,dc=kittens,dc=net
+  githubdotcomid: bobtail
+  manager: bengal
+germanrex:
+  dn: uid=germanrex,ou=People,dc=kittens,dc=net
+  githubdotcomid: germanrex
+  manager: bengal
+korat:
+  dn: uid=korat,ou=People,dc=kittens,dc=net
+  githubdotcomid: korat
+  manager: balinese
+minskin:
+  dn: uid=minskin,ou=People,dc=kittens,dc=net
+  githubdotcomid: minskin
+  manager: balinese
+mainecoon:
+  dn: uid=mainecoon,ou=People,dc=kittens,dc=net
+  githubdotcomid: mainecoon
+  manager: balinese
+RAGAMUFFIn:
+  dn: uid=RAGAMUFFIn,ou=People,dc=kittens,dc=net
+  githubdotcomid: RAGAMUFFIn
+  manager: mainecoon
+blackmanx:
+  dn: uid=blackmanx,ou=People,dc=kittens,dc=net
+  githubdotcomid: blackmanx
+  manager: mainecoon
+russianblue:
+  dn: uid=russianblue,ou=People,dc=kittens,dc=net
+  githubdotcomid: russianblue
+  manager: mainecoon
+pixiEbob:
+  dn: uid=pixiEbob,ou=People,dc=kittens,dc=net
+  githubdotcomid: pixiEbob
+  manager: balinese
+peterbald:
+  dn: uid=peterbald,ou=People,dc=kittens,dc=net
+  githubdotcomid: peterbald
+  manager: orientallonghair
+orientallonghair:
+  dn: uid=orientallonghair,ou=People,dc=kittens,dc=net
+  githubdotcomid: orientallonghair
+  manager: napoleon
+napoleon:
+  dn: uid=napoleon,ou=People,dc=kittens,dc=net
+  githubdotcomid: napoleon
+  manager: napoleon
+oJosazuLEs:
+  dn: uid=oJosazuLEs,ou=People,dc=kittens,dc=net
+  githubdotcomid: oJosazuLEs
+  manager: DONSKoy
+NEBELUNg:
+  dn: uid=NEBELUNg,ou=People,dc=kittens,dc=net
+  githubdotcomid: NEBELUNg
+  manager: oJosazuLEs
+khaomanee:
+  dn: uid=khaomanee,ou=People,dc=kittens,dc=net
+  githubdotcomid: khaomanee
+  manager: oJosazuLEs
+cyprus:
+  dn: uid=cyprus,ou=People,dc=kittens,dc=net
+  githubdotcomid: cyprus
+  manager: oJosazuLEs
+cheetoh:
+  dn: uid=cheetoh,ou=People,dc=kittens,dc=net
+  githubdotcomid: cheetoh
+  manager: oJosazuLEs
+chausie:
+  dn: uid=chausie,ou=People,dc=kittens,dc=net
+  githubdotcomid: chausie
+  manager: oJosazuLEs
+DONSKoy:
+  dn: uid=DONSKoy,ou=People,dc=kittens,dc=net
+  githubdotcomid: DONSKoy
+  manager: foldex
+foldex:
+  dn: uid=foldex,ou=People,dc=kittens,dc=net
+  githubdotcomid: foldex
+  manager: orientallonghair
+oregonrex:
+  dn: uid=oregonrex,ou=People,dc=kittens,dc=net
+  githubdotcomid: oregonrex
+  manager: DONSKoy
+serengeti:
+  dn: uid=serengeti,ou=People,dc=kittens,dc=net
+  githubdotcomid: serengeti
+  manager: balinese

@@ -1,0 +1,5 @@
+---
+description: Broken "not" check
+rules:
+  not:
+    - direct_report: MAINECOON

@@ -1,0 +1,5 @@
+# Keyboard Cat team
+description = All of Keyboard Cat, minus 2 people to test !=
+management = DONSKoy
+username != nebelung
+username != khaomanee

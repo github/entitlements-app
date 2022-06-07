@@ -1,0 +1,3 @@
+group = pizza_teams/garfield
+contractors = all
+pre-hires = all

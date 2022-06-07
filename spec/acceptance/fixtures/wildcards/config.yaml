@@ -1,0 +1,34 @@
+---
+backends:
+  dockerized-ldap:
+    ldap_binddn: <%= ENV["LDAP_BINDDN"] %>
+    ldap_bindpw: <%= ENV["LDAP_BINDPW"] %>
+    ldap_uri: <%= ENV["LDAP_URI"] %>
+    person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+    type: ldap
+configuration_path: ./ldap-config
+extras:
+  ldap_group: {}
+  orgchart:
+    manager_map_file: ../common/manager-map.yaml
+groups:
+  bar:
+    base: ou=bar,ou=Groups,dc=kittens,dc=net
+    create_if_missing: true
+    backend: dockerized-ldap
+  foo:
+    base: ou=foo,ou=Groups,dc=kittens,dc=net
+    create_if_missing: true
+    backend: dockerized-ldap
+people:
+  ldap:
+    type: ldap
+    config:
+      base: ou=People,dc=kittens,dc=net
+      ldap_binddn: <%= ENV["LDAP_BINDDN"] %>
+      ldap_bindpw: <%= ENV["LDAP_BINDPW"] %>
+      ldap_uri: <%= ENV["LDAP_URI"] %>
+      person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+      additional_attributes:
+        - shellentitlements
+people_data_source: ldap

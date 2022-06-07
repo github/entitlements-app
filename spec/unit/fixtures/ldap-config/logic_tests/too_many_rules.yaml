@@ -1,0 +1,6 @@
+---
+description: No rules, just right!
+rules:
+  username: foo
+  username: bar
+  management: baz

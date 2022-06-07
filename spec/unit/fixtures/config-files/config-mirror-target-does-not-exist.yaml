@@ -1,0 +1,24 @@
+# Configuration file for the entitlements app.
+---
+configuration_path: ./ldap-config
+extras:
+  orgchart:
+    manager_map_file: manager-map.yaml
+groups:
+  entitlements/mirror:
+    base: ou=mirror,ou=Groups,dc=kittens,dc=net
+    mirror: entitlements/target
+    person_dn_format: foo
+    type: ldap
+  pizza_teams:
+    base: ou=pizza_teams,ou=Groups,dc=kittens,dc=net
+    person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+    type: ldap
+  internal:
+    type: dummy
+people:
+  yaml:
+    type: yaml
+    filename: people.yaml
+    person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+people_data_source: yaml

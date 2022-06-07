@@ -1,0 +1,4 @@
+description = `expires` is an invalid keyword
+username = blackmanx; expires = 2018-05-01
+username = russianblue; expiration = 2018-05-01
+username = mainecoon

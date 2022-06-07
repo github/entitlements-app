@@ -1,0 +1,4 @@
+contractors = pizza_teams/garfield-contractors
+contractors = pizza_teams/pixiebob
+contractors = pizza_teams/everybody-filter
+group = pizza_teams/garfield-mixed-filter

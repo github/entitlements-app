@@ -1,0 +1,3 @@
+# Example of text file format
+description = Example
+management = ojosazules

@@ -1,0 +1,4 @@
+description = This entitlement is not expired
+username = blackmanx
+username = ragamuffin
+expiration = 2043-01-01

@@ -1,0 +1,12 @@
+description: Yo kittens
+extras:
+  ldap_group:
+    ldap_uri: ldaps://ldap.example.net
+    ldap_binddn: uid=binder,ou=People,dc=example,dc=net
+    ldap_bindpw: s3cr3t
+filters:
+  excluded-paths: none
+rules:
+  or:
+    - username: russianblue
+    - username: BlackManx

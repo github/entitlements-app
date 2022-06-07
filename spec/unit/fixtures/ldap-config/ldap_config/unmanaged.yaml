@@ -1,0 +1,4 @@
+---
+description: Invoke an unmanaged LDAP group
+rules:
+  group: cn=chickens,ou=poultry,ou=Groups,dc=kittens,dc=net

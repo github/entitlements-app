@@ -1,0 +1,2 @@
+description = Example group 3
+username = cyprus

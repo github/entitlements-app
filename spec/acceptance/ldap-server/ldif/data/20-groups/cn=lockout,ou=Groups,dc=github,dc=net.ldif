@@ -1,0 +1,7 @@
+dn: cn=lockout,ou=Groups,dc=kittens,dc=net
+cn: lockout
+description: Lost devices
+objectclass: groupOfUniqueNames
+owner: cn=garfield,ou=Staff_Account,ou=Groups,dc=kittens,dc=net
+owner: cn=org-eng-sec-it,ou=Groups,dc=kittens,dc=net
+uniquemember: uid=cheetoh,ou=People,dc=kittens,dc=net

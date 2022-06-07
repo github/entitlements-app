@@ -1,0 +1,27 @@
+name: lint
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  rubocop:
+    name: runner / rubocop
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      # https://github.com/ruby/setup-ruby/releases/tag/v1.87.0
+      - uses: ruby/setup-ruby@cf1a6dd2d8563b59c7007e381836fd252ab2ac5b
+        with:
+          ruby-version: 2.7.5
+          bundler-cache: true
+
+      - name: rubocop
+        run: bundle exec rubocop -c .rubocop.yml lib/ spec/

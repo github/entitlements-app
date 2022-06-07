@@ -1,0 +1,11 @@
+description: Expiration rule testing
+filters:
+  contractors:
+    - key: pixiebob
+      expiration: "2018-03-01"
+rules:
+  or:
+    - username: pixiebob
+    - username: blackmanx
+      expiration: "2018-03-01"
+    - username: mainecoon

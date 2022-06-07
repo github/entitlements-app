@@ -1,0 +1,18 @@
+---
+configuration_path: foo/bar
+backends:
+  dummy-backend:
+    my-key1: default-value-1
+    my-key2: default-value-2
+    type: dummy
+groups:
+  foo/bar/baz:
+    backend: dummy-backend
+    my-key2: specific-value-2
+    type: ldap
+people:
+  yaml:
+    type: yaml
+    filename: people.yaml
+    person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+people_data_source: yaml

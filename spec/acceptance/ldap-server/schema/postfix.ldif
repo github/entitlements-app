@@ -1,0 +1,11 @@
+dn: cn=postfix,cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: postfix
+olcAttributeTypes: {0}( 1.3.6.1.4.1.4203.666.1.200 NAME 'mailacceptinggenerali
+ d' EQUALITY caseIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4
+ .1.1466.115.121.1.15{1024} )
+olcAttributeTypes: {1}( 1.3.6.1.4.1.4203.666.1.201 NAME 'maildrop' EQUALITY ca
+ seIgnoreMatch SUBSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.12
+ 1.1.15{1024} )
+olcObjectClasses: {0}( 1.3.6.1.4.1.4203.666.1.100 NAME 'postfixUser' DESC 'Pos
+ tfix Mail User' SUP top AUXILIARY MAY ( mailacceptinggeneralid $ maildrop ) )

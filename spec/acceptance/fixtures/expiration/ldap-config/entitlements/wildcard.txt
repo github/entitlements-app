@@ -1,0 +1,2 @@
+description = Valid top level entitlement
+group = pizza_teams/*

@@ -1,0 +1,6 @@
+description: Yo kittens
+filters: kittens
+rules:
+  or:
+    - username: russianblue
+    - username: BlackManx

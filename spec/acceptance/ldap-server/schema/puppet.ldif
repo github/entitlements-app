@@ -1,0 +1,18 @@
+dn: cn=puppet,cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: puppet
+olcAttributeTypes: {0}( 1.3.6.1.4.1.34380.1.1.3.10 NAME 'puppetClass' DESC 'Pu
+ ppet Node Class' EQUALITY caseIgnoreIA5Match SYNTAX 1.3.6.1.4.1.1466.115.121.
+ 1.26 )
+olcAttributeTypes: {1}( 1.3.6.1.4.1.34380.1.1.3.9 NAME 'parentNode' DESC 'Pupp
+ et Parent Node' EQUALITY caseIgnoreIA5Match SYNTAX 1.3.6.1.4.1.1466.115.121.1
+ .26 SINGLE-VALUE )
+olcAttributeTypes: {2}( 1.3.6.1.4.1.34380.1.1.3.11 NAME 'environment' DESC 'Pu
+ ppet Node Environment' EQUALITY caseIgnoreIA5Match SYNTAX 1.3.6.1.4.1.1466.11
+ 5.121.1.26 )
+olcAttributeTypes: {3}( 1.3.6.1.4.1.34380.1.1.3.12 NAME 'puppetVar' DESC 'A va
+ riable setting for puppet' EQUALITY caseIgnoreIA5Match SYNTAX 1.3.6.1.4.1.146
+ 6.115.121.1.26 )
+olcObjectClasses: {0}( 1.3.6.1.4.1.34380.1.1.1.2 NAME 'puppetClient' DESC 'Pup
+ pet Client objectclass' SUP top AUXILIARY MAY ( puppetclass $ parentnode $ en
+ vironment $ puppetvar ) )

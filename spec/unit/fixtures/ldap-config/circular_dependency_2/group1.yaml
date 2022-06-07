@@ -1,0 +1,6 @@
+---
+description: Circular dependency test
+rules:
+  or:
+    - group: circular_dependency_2/group2
+    - group: circular_dependency_2/group3

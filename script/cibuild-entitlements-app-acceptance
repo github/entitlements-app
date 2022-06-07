@@ -1,0 +1,78 @@
+#!/bin/bash
+
+export DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
+export APP_NAME="entitlements"
+export GIT_SERVER_NAME="git-server"
+export LDAP_SERVER_NAME="ldap-server"
+
+if [ ! -f "${DIR}/spec/acceptance/Dockerfile.${APP_NAME}" ]; then
+  echo "No Dockerfile.${APP_NAME} was found"
+  exit 255
+fi
+
+begin_fold() {
+  local tag="$1"
+  echo "%%%FOLD {${tag}}%%%" 1>&2
+  set -x
+}
+
+end_fold() {
+  set +x
+  echo "%%%END FOLD%%%" 1>&2
+}
+
+docker_compose() {
+  cd "$DIR" && docker-compose -f "$DIR/spec/acceptance/docker-compose.yml" "$@"
+}
+
+unset DOCKER_COMPOSE_NEEDS_SHUTDOWN
+
+cleanup() {
+  if [ -n "$DOCKER_COMPOSE_NEEDS_SHUTDOWN" ]; then
+    begin_fold "Logs from ${GIT_SERVER_NAME} container"
+    docker_compose logs --no-color "$GIT_SERVER_NAME" 1>&2
+    end_fold
+
+    begin_fold "Logs from ${LDAP_SERVER_NAME} container"
+    docker_compose logs --no-color "$LDAP_SERVER_NAME" 1>&2
+    end_fold
+
+    begin_fold "Shutting down docker-compose"
+    docker_compose down 1>&2
+    end_fold
+  fi
+  unset DOCKER_COMPOSE_NEEDS_SHUTDOWN
+}
+trap cleanup EXIT
+
+set -e
+
+begin_fold "Building/updating ${APP_NAME} container"
+docker_compose build "${APP_NAME}"
+end_fold
+
+export DOCKER_COMPOSE_NEEDS_SHUTDOWN="true"
+
+begin_fold "Starting ${LDAP_SERVER_NAME} container"
+docker_compose up --force-recreate -d "${LDAP_SERVER_NAME}"
+end_fold
+
+begin_fold "Starting ${GIT_SERVER_NAME} container"
+docker_compose up --force-recreate -d "${GIT_SERVER_NAME}"
+end_fold
+
+# This is where the tests actually run
+echo "Starting ${APP_NAME} acceptance test container" 1>&2
+docker_compose run "${APP_NAME}" "/acceptance/support/run-app.sh" && exitcode=$? || exitcode=$?
+
+# Display logs from containers and shut down docker-compose.
+cleanup
+
+# We're done!
+echo ""
+echo "*****************************************************************"
+echo "${APP_NAME} acceptance exit status = ${exitcode}"
+echo "*****************************************************************"
+echo ""
+
+exit $exitcode

@@ -1,0 +1,83 @@
+name: acceptance
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  # Detects changes to any of the source files for entitlements-app
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    outputs:
+      has_change: ${{ steps.diff.outputs.has_change}}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - id: fetch-base
+        if: github.event_name == 'pull_request'
+        name: fetch the latest commit in the base branch to diff against
+        run: git fetch --no-tags --prune --depth=1 origin '+refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}'
+
+      - id: diff
+        if: github.event_name == 'pull_request'
+        name: diff against the base branch latest commit for specific paths
+        run: |
+          git diff \
+            origin/${{ github.base_ref }} \
+            HEAD \
+            -- \
+              'bin/**' \
+              'lib/**' \
+              'script/**' \
+              'spec/**' \
+              'vendor/**' \
+              '.ruby-version' \
+              'entitlements.gemspec' \
+              'Gemfile' \
+              'Gemfile.lock' \
+            > diff.txt
+
+            # If the diff file is not empty, it has changes.
+            [ -s diff.txt ] && echo "::set-output name=has_change::true" || echo "::set-output name=has_change::false"
+  
+      - name: set has_change to true for push to main/master
+        if: github.event_name == 'push'
+        run: echo "::set-output name=has_change::true"
+
+  acceptance-suite:
+    needs: changes
+    runs-on: ubuntu-latest
+    name: runner / acceptance-tests
+    permissions:
+      contents: read
+
+    steps:
+
+      # If source files were not changed, we don't need the acceptance test suite
+      - name: bypass
+        if: ${{ needs.changes.outputs.has_change != 'true' }}
+        run: |
+          echo "✅ Bypassing acceptance tests - they are not required for this change"
+
+      - name: Check out code
+        if: ${{ needs.changes.outputs.has_change == 'true' }}
+        uses: actions/checkout@v2
+
+      # Use Docker layer caching for 'docker build' and 'docker-compose build' commands.
+      # https://github.com/satackey/action-docker-layer-caching/releases/tag/v0.0.11
+      - uses: satackey/action-docker-layer-caching@46d2c640b1d8ef50d185452ad6fb324e6bd1d052
+        if: ${{ needs.changes.outputs.has_change == 'true' }}
+        continue-on-error: true
+
+      - name: acceptance tests
+        if: ${{ needs.changes.outputs.has_change == 'true' }}
+        run: script/cibuild-entitlements-app-acceptance
+
+      - name: acceptance tests passed
+        run: echo "✅ The acceptance test suite has passed"

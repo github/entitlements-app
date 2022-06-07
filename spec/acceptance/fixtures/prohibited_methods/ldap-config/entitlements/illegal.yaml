@@ -1,0 +1,4 @@
+---
+description: References a disallowed method
+rules:
+  group: pizza_teams/foo

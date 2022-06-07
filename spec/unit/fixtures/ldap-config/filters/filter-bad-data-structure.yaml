@@ -1,0 +1,9 @@
+description: Yo kittens
+filters:
+  contractors:
+    foo: bar
+    fizz: buzz
+rules:
+  or:
+    - username: russianblue
+    - username: BlackManx

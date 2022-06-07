@@ -1,0 +1,12 @@
+inherit_gem:
+  rubocop-github:
+    - config/default.yml
+
+AllCops:
+  DisplayCopNames: true
+  TargetRubyVersion: 2.7.5
+  Exclude:
+    - 'bin/*'
+    - 'spec/acceptance/fixtures/**/*'
+    - 'spec/unit/fixtures/**/*'
+    - 'vendor/gems/**/*'

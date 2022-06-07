@@ -1,0 +1,7 @@
+---
+description: This entitlement is expired
+expiration: 2001-01-01
+rules:
+  or:
+    - username: peterbald
+    - username: nebelung

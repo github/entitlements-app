@@ -1,0 +1,3 @@
+description = Valid top level entitlement
+expiration = 2040-01-01
+group = pizza_teams/valid

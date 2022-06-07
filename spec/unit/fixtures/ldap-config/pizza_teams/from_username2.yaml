@@ -1,0 +1,7 @@
+---
+description: Test fixture for the username test
+rules:
+  or:
+    - username: russianblue
+    - username: BlackManx
+    - username: fluffy_kittens

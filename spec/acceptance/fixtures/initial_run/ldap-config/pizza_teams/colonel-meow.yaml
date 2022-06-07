@@ -1,0 +1,9 @@
+# By virtue of filename this creates pizza_teams/colonel-meow
+
+---
+description: Forever known as @russianblue's old team, just kidding
+rules:
+  management: ojosazules
+  expiration: "2050-01-01"
+metadata:
+  foo: bar

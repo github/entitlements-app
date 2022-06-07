@@ -1,0 +1,4 @@
+---
+description: Test fixture for the direct report test for a manager not in LDAP anymore
+rules:
+  direct_report: hubot

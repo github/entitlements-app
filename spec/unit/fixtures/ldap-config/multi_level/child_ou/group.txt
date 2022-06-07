@@ -1,0 +1,2 @@
+description = a multi-level example
+username = hubot

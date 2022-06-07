@@ -1,0 +1,12 @@
+---
+configuration_path: foo/bar
+groups:
+  foo/bar/baz:
+    foo: bar
+    fizz: buzz
+people:
+  yaml:
+    type: yaml
+    filename: people.yaml
+    person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+people_data_source: yaml

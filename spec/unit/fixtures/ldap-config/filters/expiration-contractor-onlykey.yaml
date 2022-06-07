@@ -1,0 +1,11 @@
+description: Expiration rule testing
+filters:
+  contractors:
+    - key: pixiebob
+    - key: serengeti
+rules:
+  or:
+    - username: pixiebob
+    - username: serengeti
+    - username: blackmanx
+    - username: mainecoon

@@ -1,0 +1,8 @@
+---
+  description: Locked out users
+  filters:
+    contractors: all
+    lockout: all
+    pre-hires: all
+  rules:
+    ldap_group: cn=lockout,ou=Groups,dc=kittens,dc=net

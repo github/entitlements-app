@@ -1,0 +1,6 @@
+description = One custom filter specified
+username = BlackManx
+username = ragamuffin
+username = peterbald
+username = mainecoon
+group &= pizza_teams/grumpy-cat-eng

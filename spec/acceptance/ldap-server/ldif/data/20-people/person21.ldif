@@ -1,0 +1,33 @@
+dn: uid=desertlynx,ou=People,dc=kittens,dc=net
+cn: desertlynx
+displayname: desertlynx
+employeenumber: 000021
+gecos: desertlynx
+gidnumber: 100
+givenname: desertlynx
+homedirectory: /home/desertlynx
+loginshell: /bin/bash
+mail: desertlynx@kittens.net
+manager: uid=bengal,ou=People,dc=kittens,dc=net
+objectclass: top
+objectclass: person
+objectclass: organizationalPerson
+objectclass: inetOrgPerson
+objectclass: posixAccount
+objectclass: simpleSecurityObject
+objectclass: shadowAccount
+objectclass: entitlementsUser
+postaladdress: 123 Cuddle Drive, Purrville CA 12345
+postalcode: 12345
+shadowinactive: 15
+shadowlastchange: 16252
+shadowmax: 120
+shadowmin: 0
+shadowwarning: 15
+sn: desertlynx
+street: 123 Cuddle Drive
+telephonenumber: +12005551212
+uid: desertlynx
+uidnumber: 20264
+userpassword:: e0JDUllQVH0kMmEkMTAkMTdIazZxSExIanM5a2JyMkN0WUk4T1pLUkZQa3ZQ
+ WWRtWEE1dFNiSUxKVzNxTU1DU2VEQ08=

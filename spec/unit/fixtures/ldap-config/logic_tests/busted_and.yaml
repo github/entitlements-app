@@ -1,0 +1,5 @@
+---
+description: Broken "and" check
+rules:
+  and:
+    direct_report: MAINECOON

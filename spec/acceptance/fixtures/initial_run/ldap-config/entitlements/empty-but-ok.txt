@@ -1,0 +1,2 @@
+description = Group for testing empty membership
+group = pizza_teams/empty-but-ok

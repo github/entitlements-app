@@ -1,0 +1,15 @@
+---
+description: Nested checks (if anyone ever does this, get mad at them)
+rules:
+  or:
+    - username: napoleon
+    - and:
+        - management: MAINECOON
+        - not:
+            or:
+              - username: BlackManx
+              - username: RAGAMUFFIn
+    - and:
+        - direct_report: ojosazules
+        - not:
+            username: nebelung

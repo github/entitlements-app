@@ -1,0 +1,5 @@
+description = Lots of metadata here
+username = BlackManx
+username = RAGAMUFFIn
+metadata_kittens = awesome; expiration = 2018-01-01
+metadata_puppies = young dogs; expiration = 2018-09-01

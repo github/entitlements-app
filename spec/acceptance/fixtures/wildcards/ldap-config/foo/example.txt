@@ -1,0 +1,3 @@
+description = Example group
+group = bar/meta
+group = foo/*

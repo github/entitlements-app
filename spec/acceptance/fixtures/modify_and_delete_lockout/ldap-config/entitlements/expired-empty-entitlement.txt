@@ -1,0 +1,4 @@
+description = Group for testing entitlement expiration
+username = blackmanx; expiration = 2001-01-01
+username = nebelung; expiration = 2001-01-01
+expiration = 2001-01-01

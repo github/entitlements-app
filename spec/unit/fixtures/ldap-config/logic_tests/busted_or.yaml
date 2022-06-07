@@ -1,0 +1,5 @@
+---
+description: Broken "or" check
+rules:
+  or:
+    direct_report: MAINECOON

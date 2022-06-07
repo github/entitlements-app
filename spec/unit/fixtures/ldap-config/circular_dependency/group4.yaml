@@ -1,0 +1,4 @@
+---
+description: Circular dependency test
+rules:
+  group: circular_dependency/group4

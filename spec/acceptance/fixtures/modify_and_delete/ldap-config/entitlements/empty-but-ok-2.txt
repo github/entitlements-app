@@ -1,0 +1,3 @@
+description = Group for testing empty membership
+username = RAGAMUFFIn
+group = pizza_teams/empty-but-ok

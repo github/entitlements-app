@@ -1,0 +1,31 @@
+{
+  "data": {
+    "organization": {
+      "membersWithRole": {
+        "edges": [
+          {
+            "node": {
+              "login": "ragamuffin"
+            },
+            "role": "MEMBER",
+            "cursor": "Y3Vyc29yOnYyOpEK"
+          },
+          {
+            "node": {
+              "login": "mainecoon"
+            },
+            "role": "MEMBER",
+            "cursor": "Y3Vyc29yOnYyOpEL"
+          },
+          {
+            "node": {
+              "login": "laperm"
+            },
+            "role": "MEMBER",
+            "cursor": "Y3Vyc29yOnYyOpEM"
+          }
+        ]
+      }
+    }
+  }
+}

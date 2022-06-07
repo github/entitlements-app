@@ -1,0 +1,4 @@
+description = This is in a sub-ou
+username = MaiNecOON
+username = RAGAMUFFIn
+metadata_gid_number = 34567

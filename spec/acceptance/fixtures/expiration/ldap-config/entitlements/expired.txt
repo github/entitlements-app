@@ -1,0 +1,4 @@
+description = Expired top level entitlement
+expiration = 2001-01-01
+group = pizza_teams/valid
+group = pizza_teams/partial

@@ -1,0 +1,3 @@
+description = Example
+management = MAINECOON
+fizzbuzz_alias = true

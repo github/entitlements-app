@@ -1,0 +1,5 @@
+description = A place for contractors and employees to hang out
+contractors = none
+pre-hires = all
+username = pixiebob
+username = russianblue

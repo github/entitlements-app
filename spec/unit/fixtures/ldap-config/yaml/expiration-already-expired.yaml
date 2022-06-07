@@ -1,0 +1,8 @@
+description: Expiration rule testing
+rules:
+  or:
+    - username: blackmanx
+      expiration: "2018-03-01"
+    - username: russianblue
+      expiration: "2018-03-01"
+    - username: mainecoon

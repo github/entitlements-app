@@ -1,0 +1,20 @@
+---
+configuration_path: foo/bar
+groups:
+  foo/bar/baz:
+    type: dummy
+people:
+  ldap:
+    type: ldap
+    config:
+      base: ou=People,dc=kittens,dc=net
+      ldap_uri: ldaps://ldap.example.net
+      ldap_binddn: uid=binder,ou=People,dc=kittens,dc=net
+      ldap_bindpw: s3cr3t
+      person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+  yaml:
+    type: yaml
+    config:
+      filename: people.yaml
+      person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+people_data_source: ldap

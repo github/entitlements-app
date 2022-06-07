@@ -1,0 +1,26 @@
+# Configuration file for the entitlements app.
+---
+configuration_path: ./ldap-config
+extras:
+  ldap_group:
+    ldap_uri: ldaps://ldap.example.net
+    ldap_binddn: uid=binder,ou=People,dc=example,dc=net
+    ldap_bindpw: s3cr3t
+  orgchart:
+    manager_map_file: manager-map.yaml
+people:
+  yaml:
+    type: yaml
+    filename: people.yaml
+    person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+people_data_source: yaml
+groups:
+  pizza_teams:
+    base: ou=pizza_teams,ou=Groups,dc=kittens,dc=net
+    ldap_uri: ldaps://ldap.example.net
+    ldap_binddn: uid=binder,ou=People,dc=example,dc=net
+    ldap_bindpw: s3cr3t
+    person_dn_format: uid=%KEY%,ou=People,dc=kittens,dc=net
+    type: ldap
+  internal:
+    type: dummy

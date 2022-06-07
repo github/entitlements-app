@@ -1,0 +1,6 @@
+---
+description: Simple "and" check
+rules:
+  and:
+    - direct_report: MAINECOON
+    - username: BlackManx

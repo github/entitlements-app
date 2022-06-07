@@ -1,0 +1,7 @@
+---
+description: Illegal data key
+rules:
+  direct_report: MAINECOON
+metadata:
+  kittens: awesome
+  12345: 67890

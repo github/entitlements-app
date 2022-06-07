@@ -1,0 +1,4 @@
+---
+description: Test fixture for the manager test for a non-manager
+rules:
+  management: BlackManx

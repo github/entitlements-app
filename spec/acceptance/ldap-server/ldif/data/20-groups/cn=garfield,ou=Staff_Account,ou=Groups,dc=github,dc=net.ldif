@@ -1,0 +1,13 @@
+dn: cn=garfield,ou=Staff_Account,ou=Groups,dc=kittens,dc=net
+cn: garfield
+description: garfield
+objectclass: groupOfUniqueNames
+owner: cn=garfield,ou=Staff_Account,ou=Groups,dc=kittens,dc=net
+owner: cn=org-eng-sec-it,ou=Groups,dc=kittens,dc=net
+uniquemember: uid=blackmanx,ou=People,dc=kittens,dc=net
+uniquemember: uid=korat,ou=People,dc=kittens,dc=net
+uniquemember: uid=russianblue,ou=People,dc=kittens,dc=net
+uniquemember: uid=RAGAMUFFIn,ou=People,dc=kittens,dc=net
+uniquemember: uid=peterbald,ou=People,dc=kittens,dc=net
+uniquemember: uid=mainecoon,ou=People,dc=kittens,dc=net
+uniquemember: uid=minskin,ou=People,dc=kittens,dc=net

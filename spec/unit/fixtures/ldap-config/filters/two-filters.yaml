@@ -1,0 +1,8 @@
+description: Yo kittens
+filters:
+  contractors: all
+  pre-hires: all
+rules:
+  or:
+    - username: russianblue
+    - username: BlackManx

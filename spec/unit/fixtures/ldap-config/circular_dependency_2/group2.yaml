@@ -1,0 +1,6 @@
+---
+description: Circular dependency test
+rules:
+  or:
+    - username: BlackManx
+    - username: RAGAMUFFIn

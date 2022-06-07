@@ -1,0 +1,5 @@
+description = Illegal metadata key here
+username = BlackManx
+username = RAGAMUFFIn
+metadata_kittens = awesome
+metadata_ = foo

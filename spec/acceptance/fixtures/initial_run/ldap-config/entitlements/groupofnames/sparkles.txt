@@ -1,0 +1,3 @@
+description = This is in a sub-ou
+group = dummy-ou/ragamuffin
+metadata_gid_number = 23456

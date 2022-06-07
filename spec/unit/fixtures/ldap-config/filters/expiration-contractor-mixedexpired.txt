@@ -1,0 +1,7 @@
+description = Expiration rule testing
+username = pixiebob
+username = serengeti
+username = blackmanx; expiration = 2018-03-01
+username = mainecoon
+contractors = pixiebob; expiration = 2018-09-01
+contractors = serengeti; expiration = 2018-03-01

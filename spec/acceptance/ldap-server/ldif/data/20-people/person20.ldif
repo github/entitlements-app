@@ -1,0 +1,33 @@
+dn: uid=cyprus,ou=People,dc=kittens,dc=net
+cn: cyprus
+displayname: cyprus
+employeenumber: 000020
+gecos: cyprus
+gidnumber: 100
+givenname: cyprus
+homedirectory: /home/cyprus
+loginshell: /bin/bash
+mail: cyprus@kittens.net
+manager: uid=oJosazuLEs,ou=People,dc=kittens,dc=net
+objectclass: top
+objectclass: person
+objectclass: organizationalPerson
+objectclass: inetOrgPerson
+objectclass: posixAccount
+objectclass: simpleSecurityObject
+objectclass: shadowAccount
+objectclass: entitlementsUser
+postaladdress: 123 Cuddle Drive, Purrville CA 12345
+postalcode: 12345
+shadowinactive: 15
+shadowlastchange: 16252
+shadowmax: 120
+shadowmin: 0
+shadowwarning: 15
+sn: cyprus
+street: 123 Cuddle Drive
+telephonenumber: +12005551212
+uid: cyprus
+uidnumber: 20263
+userpassword:: e0JDUllQVH0kMmEkMTAkMTdIazZxSExIanM5a2JyMkN0WUk4T1pLUkZQa3ZQ
+ WWRtWEE1dFNiSUxKVzNxTU1DU2VEQ08=

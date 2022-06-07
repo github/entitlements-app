@@ -1,0 +1,2 @@
+contractors = pizza_teams/garfield-employees
+group = pizza_teams/garfield-mixed-filter

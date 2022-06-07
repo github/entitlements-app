@@ -1,0 +1,8 @@
+username = nebelung
+username = ojosazules
+username = donskoy
+username = blackmanx
+username = russianblue
+username = ragamuffin
+username = MAINECOON
+group &= pizza_teams/grumpy-cat-eng

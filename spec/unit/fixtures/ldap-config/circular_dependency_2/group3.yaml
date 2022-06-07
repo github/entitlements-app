@@ -1,0 +1,6 @@
+---
+description: Circular dependency test
+rules:
+  or:
+    - username: russianblue
+    - group: circular_dependency_2/group4

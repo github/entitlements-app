@@ -1,0 +1,3 @@
+dn: ou=Alumni,dc=kittens,dc=net
+objectClass: organizationalUnit
+ou: alumni

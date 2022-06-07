@@ -1,0 +1,11 @@
+description: Yo kittens
+filters:
+  contractors:
+    - pixiEBOB
+    - all
+rules:
+  or:
+    - username: PixiEbob
+    - username: serengeti
+    - username: russianblue
+    - username: RagaMuffin

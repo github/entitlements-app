@@ -1,0 +1,7 @@
+# Duplicate key error file
+description = Example
+management = MAINECOON # Example
+management = balinese # Duplicate line
+username=nebelung
+username=cheetoh
+username=cyprus

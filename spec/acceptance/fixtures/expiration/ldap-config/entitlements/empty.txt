@@ -1,0 +1,2 @@
+description = Empty entitlement because sub-entitlement is all expired
+group = pizza_teams/expired

@@ -1,0 +1,4 @@
+# Keyboard Cat team
+description = All of Keyboard Cat
+management = DONSKoy; expiration = 2050-01-01
+metadata_foo = bar

@@ -1,0 +1,25 @@
+FROM ruby:2.7.5-buster
+LABEL maintainer="GitHub Security Ops <opensource+entitlements-app@github.com>"
+ENV HOME /root
+ENV RELEASE=buster
+ENV container docker
+WORKDIR /data/entitlements
+
+# Install dependency packages for bootstrapping and running...
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    build-essential \
+    cmake \
+    ldap-utils
+
+# Install bundler
+RUN gem install bundler
+
+# Bootstrap files and caching for speed
+COPY "vendor/cache/" "/data/entitlements/vendor/cache/"
+COPY "script/" "/data/entitlements/script/"
+COPY [".rubocop.yml", ".ruby-version", "entitlements.gemspec", "Gemfile", "Gemfile.lock", "VERSION", "/data/entitlements/"]
+
+# Source Files
+COPY "bin/" "/data/entitlements/bin/"
+COPY "lib/" "/data/entitlements/lib/"
+COPY "spec/" "/data/entitlements/spec/"

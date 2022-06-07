@@ -1,0 +1,7 @@
+---
+configuration_path: foo/bar
+groups:
+  foo/bar/baz:
+    type: dummy
+people: {}
+people_data_source: yaml

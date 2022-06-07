@@ -1,0 +1,4 @@
+description = This group will some day be empty but that's OK
+username = BlackManx
+username = fluffy_kitteninator
+metadata_no_members_ok = true

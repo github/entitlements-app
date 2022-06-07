@@ -1,0 +1,6 @@
+# A single not-equal argument
+description = Example
+management = MAINECOON
+group = cn=chickens,ou=Poultry,dc=kittens,dc=net
+username = BlackManx
+username != russianblue

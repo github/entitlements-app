@@ -1,0 +1,4 @@
+description = Example
+filter_contractors = none
+# There aren't any conditional keys here
+metadata_no_conditions_ok = true

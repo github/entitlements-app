@@ -1,0 +1,9 @@
+description = Multiple custom filters specified
+username = BlackManx
+username = ragamuffin
+username = peterbald
+username = mainecoon
+username = nebelung
+username = ojosazules
+group &= pizza_teams/grumpy-cat-eng
+direct_report &= ojosazules

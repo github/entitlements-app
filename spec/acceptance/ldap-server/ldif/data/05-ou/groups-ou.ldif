@@ -1,0 +1,7 @@
+dn: ou=Groups,dc=kittens,dc=net
+objectClass: organizationalUnit
+ou: groups
+
+dn: ou=Staff_Account,ou=Groups,dc=kittens,dc=net
+objectClass: organizationalUnit
+ou: groups

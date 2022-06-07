@@ -1,0 +1,2 @@
+description = Example group 1
+username = nebelung
