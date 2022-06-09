@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    entitlements (0.1.5)
+    entitlements (0.1.6)
       concurrent-ruby (= 1.1.9)
       contracts (= 0.16.0)
       faraday (>= 0.17.3, < 0.18)
@@ -34,7 +34,7 @@ GEM
       concurrent-ruby (~> 1.0)
     json (2.6.2)
     minitest (5.15.0)
-    multipart-post (2.2.0)
+    multipart-post (2.2.2)
     net-ldap (0.17.1)
     octokit (4.22.0)
       faraday (>= 0.9)
@@ -124,4 +124,4 @@ DEPENDENCIES
   webmock (= 3.4.2)
 
 BUNDLED WITH
-   2.3.3
+   2.3.8
