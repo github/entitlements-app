@@ -54,7 +54,7 @@ For examples on filters, see [filters](docs/filters.md)
 
 Out of the box, Entitlements will output your sets to LDAP.
 
-See [LDAP](docs/ldap.md) for more on LDAP.
+See the [OpenLDAP documentation](https://www.openldap.org/doc/) for more on LDAP.
 
 # Plugins
 
