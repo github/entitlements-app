@@ -6,7 +6,7 @@
 
 ## Quick Start
 
-See [getting started](docs/getting-started.md)
+See [getting started](docs/getting-started.md) for quick start, and [entitlements-config](https://github.com/github/entitlements-config) for example configuration.
 
 # Inputs
 
