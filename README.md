@@ -48,6 +48,10 @@ Entitlements supports a concept of filters. This allows you to group employees d
 
 For examples on filters, see [filters](docs/filters.md)
 
+### Example
+
+There is an example configuration repo [here](https://github.com/github/entitlements-config)
+
 # Outputs
 
 ## LDAP
