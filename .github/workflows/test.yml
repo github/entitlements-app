@@ -1,4 +1,6 @@
-name: test
+- name: Setup Ruby, JRuby and TruffleRuby
+  uses: ruby/setup-ruby@v1.110.0
+
 
 on:
   push:
