@@ -117,8 +117,21 @@ module MyLetDeclarations
   let(:logger) { Entitlements.dummy_logger }
 end
 
+module Contracts
+  module RSpec
+    module Mocks
+      def instance_double(klass, *args)
+        super.tap do |double|
+          allow(double).to receive(:is_a?).with(klass).and_return(true)
+        end
+      end
+    end
+  end
+end
+
 RSpec.configure do |config|
   config.include MyLetDeclarations
+  config.include Contracts::RSpec::Mocks
 
   config.before :each do
     allow(Time).to receive(:now).and_return(Time.utc(2018, 4, 1, 12, 0, 0))
