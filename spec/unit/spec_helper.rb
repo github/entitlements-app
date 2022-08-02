@@ -2,7 +2,6 @@
 
 require "base64"
 require "contracts"
-require "contracts/rspec"
 require "json"
 require "rspec"
 require "rspec/support"
