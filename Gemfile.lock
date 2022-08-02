@@ -22,7 +22,6 @@ GEM
     ast (2.4.2)
     concurrent-ruby (1.1.9)
     contracts (0.16.0)
-    contracts-rspec (0.1.0)
     crack (0.4.5)
       rexml
     diff-lcs (1.5.0)
@@ -109,7 +108,6 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  contracts-rspec (= 0.1.0)
   entitlements!
   rake (= 13.0.6)
   rspec (= 3.8.0)
@@ -124,4 +122,4 @@ DEPENDENCIES
   webmock (= 3.4.2)
 
 BUNDLED WITH
-   2.3.8
+   2.3.15
