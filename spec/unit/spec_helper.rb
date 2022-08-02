@@ -118,7 +118,6 @@ module MyLetDeclarations
 end
 
 RSpec.configure do |config|
-  config.include Contracts::RSpec::Mocks
   config.include MyLetDeclarations
 
   config.before :each do
