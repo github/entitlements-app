@@ -3,7 +3,7 @@ PATH
   specs:
     entitlements (0.1.6)
       concurrent-ruby (= 1.1.9)
-      contracts (= 0.16.0)
+      contracts (= 0.17.0)
       faraday (>= 0.17.3, < 0.18)
       net-ldap (~> 0.17.0)
       octokit (~> 4.18)
@@ -21,7 +21,7 @@ GEM
       public_suffix (>= 2.0.2, < 5.0)
     ast (2.4.2)
     concurrent-ruby (1.1.9)
-    contracts (0.16.0)
+    contracts (0.17)
     crack (0.4.5)
       rexml
     diff-lcs (1.5.0)
