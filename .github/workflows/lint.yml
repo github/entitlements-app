@@ -20,7 +20,7 @@ jobs:
       # https://github.com/ruby/setup-ruby/releases/tag/v1.87.0
       - uses: ruby/setup-ruby@cf1a6dd2d8563b59c7007e381836fd252ab2ac5b
         with:
-          ruby-version: 2.7.5
+          ruby-version:3.1.2
           bundler-cache: true
 
       - name: rubocop
