@@ -10,3 +10,6 @@ AllCops:
     - 'spec/acceptance/fixtures/**/*'
     - 'spec/unit/fixtures/**/*'
     - 'vendor/gems/**/*'
+
+Style/HashSyntax
+  EnforcedShorthandSyntax: either
