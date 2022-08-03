@@ -24,6 +24,9 @@ GEM
     contracts (0.17)
     crack (0.4.5)
       rexml
+    debug (1.6.1)
+      irb (>= 1.3.6)
+      reline (>= 0.3.1)
     diff-lcs (1.5.0)
     docile (1.4.0)
     faraday (0.17.5)
@@ -31,6 +34,9 @@ GEM
     hashdiff (1.0.1)
     i18n (1.12.0)
       concurrent-ruby (~> 1.0)
+    io-console (0.5.11)
+    irb (1.4.1)
+      reline (>= 0.3.0)
     json (2.6.2)
     minitest (5.16.2)
     multipart-post (2.2.3)
@@ -47,6 +53,8 @@ GEM
     rainbow (3.1.1)
     rake (13.0.6)
     regexp_parser (2.5.0)
+    reline (0.3.1)
+      io-console (~> 0.5)
     rexml (3.2.5)
     rspec (3.8.0)
       rspec-core (~> 3.8.0)
@@ -109,6 +117,7 @@ PLATFORMS
   x86_64-darwin-21
 
 DEPENDENCIES
+  debug (> 1.0.0)
   entitlements!
   rake (= 13.0.6)
   rspec (= 3.8.0)

@@ -19,6 +19,7 @@ Gem::Specification.new do |s|
   s.add_dependency "octokit", "~> 4.18"
   s.add_dependency "optimist", "= 3.0.0"
 
+  s.add_development_dependency "debug", "> 1.0.0"
   s.add_development_dependency "rake", "= 13.0.6"
   s.add_development_dependency "rspec", "= 3.8.0"
   s.add_development_dependency "rspec-core", "= 3.8.0"
