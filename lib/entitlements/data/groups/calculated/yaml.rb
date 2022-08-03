@@ -162,7 +162,7 @@ module Entitlements
           # Returns a Hash.
           Contract C::None => C::HashOf[String => C::Any]
           def parsed_data
-            @parsed_data ||= ::YAML.load(File.read(filename))
+            @parsed_data ||= ::YAML.load(File.read(filename), permitted_classes: [Date])
           end
         end
       end

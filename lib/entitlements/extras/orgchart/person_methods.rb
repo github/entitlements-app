@@ -32,7 +32,7 @@ module Entitlements
               raise Errno::ENOENT, "The `manager_map_file` #{manager_map_file} does not exist!"
             end
 
-            YAML.load(File.read(manager_map_file))
+            YAML.load(File.read(manager_map_file), permitted_classes: [Date])
           end
 
           u = person.uid.downcase
