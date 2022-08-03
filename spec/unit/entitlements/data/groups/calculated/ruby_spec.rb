@@ -103,7 +103,7 @@ describe Entitlements::Data::Groups::Calculated::Ruby do
 
     it "raises an error when an unexpected data structure is created" do
       filename = fixture("ldap-config/filters/filter-bad-data-structure.rb")
-      expect { described_class.new(filename: filename) }.to raise_error(ParamContractError)
+      expect { described_class.new(filename: filename) }.to raise_error(ReturnContractError)
     end
   end
 
