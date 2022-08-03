@@ -123,6 +123,7 @@ module Contracts
       def instance_double(klass, *args)
         super.tap do |double|
           allow(double).to receive(:is_a?).with(klass).and_return(true)
+          allow(double).to receive(:is_a?).with(ParamContractError).and_return(false)
         end
       end
     end
