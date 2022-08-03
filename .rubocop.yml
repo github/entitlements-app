@@ -11,5 +11,5 @@ AllCops:
     - 'spec/unit/fixtures/**/*'
     - 'vendor/gems/**/*'
 
-Style/HashSyntax
+Style/HashSyntax:
   EnforcedShorthandSyntax: either
