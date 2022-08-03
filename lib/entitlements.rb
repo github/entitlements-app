@@ -65,7 +65,7 @@ module Entitlements
     end
 
     def render(template)
-      ::ERB.new(template, safe_level: nil, trim_mode: "-").result(binding)
+      ::ERB.new(template, trim_mode: "-").result(binding)
     end
   end
 
