@@ -10,6 +10,9 @@ jobs:
   rubocop:
     name: runner / rspec
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby: [ '2.7.5', '3.1.2' ]
     permissions:
       contents: read
 
@@ -19,7 +22,7 @@ jobs:
 
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.1.2
+          ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
 
       - name: rspec tests
