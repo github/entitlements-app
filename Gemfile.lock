@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    entitlements (0.1.6)
+    entitlements-app (0.1.7)
       concurrent-ruby (= 1.1.9)
       contracts (= 0.17.0)
       faraday (>= 0.17.3, < 0.18)
@@ -46,7 +46,7 @@ GEM
       sawyer (~> 0.8.0, >= 0.5.3)
     optimist (3.0.0)
     parallel (1.22.1)
-    parser (3.1.2.0)
+    parser (3.1.2.1)
       ast (~> 2.4.1)
     public_suffix (4.0.7)
     rack (2.2.4)
@@ -78,7 +78,7 @@ GEM
       rubocop-ast (>= 1.17.0, < 2.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 1.4.0, < 3.0)
-    rubocop-ast (1.19.1)
+    rubocop-ast (1.21.0)
       parser (>= 3.1.1.0)
     rubocop-github (0.17.0)
       rubocop
@@ -113,12 +113,11 @@ GEM
       hashdiff
 
 PLATFORMS
-  ruby
   x86_64-darwin-21
 
 DEPENDENCIES
   debug (> 1.0.0)
-  entitlements!
+  entitlements-app!
   rake (= 13.0.6)
   rspec (= 3.8.0)
   rspec-core (= 3.8.0)

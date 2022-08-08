@@ -6,7 +6,7 @@ Your `entitlements-app` config `config/entitlements.yaml` runs through ERB inter
 <%-
   unless ENV['CI_MODE']
     begin
-      require_relative "/data/entitlements/lib/entitlements-and-plugins"
+      require_relative "/data/entitlements-app/lib/entitlements-and-plugins"
     rescue Exception
       begin
         require_relative "lib/entitlements-and-plugins"
