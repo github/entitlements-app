@@ -77,7 +77,12 @@ module Entitlements
         def read(uid = nil)
           @people ||= begin
             Entitlements.logger.debug "Loading people from #{filename.inspect}"
-            raw_person_data = ::YAML.load(File.read(filename), permitted_classes: [Date]).to_h
+            raw_person_data = if Entitlements.ruby_version2?
+              ::YAML.load(File.read(filename)).to_h
+            else
+              ::YAML.load(File.read(filename), permitted_classes: [Date]).to_h
+            end
+
             raw_person_data.map do |id, data|
               [id, Entitlements::Models::Person.new(uid: id, attributes: data)]
             end.to_h
