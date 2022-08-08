@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export DIR="/data/entitlements"
+export DIR="/data/entitlements-app"
 export SERVER="ldap-server.fake"
 
 begin_fold() {
@@ -99,7 +99,7 @@ if [ "$SUCCESS" -eq 0 ]; then
 fi
 
 export PATH="/usr/share/rbenv/shims:$PATH"
-cd "/data/entitlements"
+cd "/data/entitlements-app"
 FAILED_TEST=0
 for test in spec/acceptance/tests/*_spec.rb; do
   test_name=$(basename "$test" | sed -s 's/_spec\.rb$//')

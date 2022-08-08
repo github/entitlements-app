@@ -15,7 +15,7 @@ services:
           - entitlements.fake
     volumes:
       - "${DIR}/spec/acceptance:/acceptance:ro"
-      - "${DIR}/vendor/container-gems:/data/entitlements/vendor/gems:rw"
+      - "${DIR}/vendor/container-gems:/data/entitlements-app/vendor/gems:rw"
   git-server:
     entrypoint: /acceptance/git-server/run-server.sh
     image: jkarlos/git-server-docker
