@@ -58,6 +58,18 @@ module Entitlements
 
   IGNORED_FILES = Set.new(%w[README.md PR_TEMPLATE.md])
 
+  # Allows maintaining version compatibility with older versions of Ruby
+  def self.ruby_version2?
+    @ruby_version2 ||= (
+        Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('2.0.0') &&
+        Gem::Version.new(RUBY_VERSION) < Gem::Version.new('3.0.0')
+    )
+  end
+
+  def self.ruby_version3?
+    @ruby_version3 ||= (Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('3.0.0'))
+  end
+
   # Allows interpretation of ERB for the configuration file to make things less hokey.
   class ERB < OpenStruct
     def self.render_from_hash(template, hash)
