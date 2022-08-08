@@ -160,6 +160,7 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a Hash.
+          # :nocov:
           Contract C::None => C::HashOf[String => C::Any]
           def parsed_data
             @parsed_data ||= if Entitlements.ruby_version2?
@@ -168,6 +169,7 @@ module Entitlements
               ::YAML.load(File.read(filename), permitted_classes: [Date]).to_h
             end
           end
+          # :nocov:
         end
       end
     end
