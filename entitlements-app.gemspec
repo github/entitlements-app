@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 Gem::Specification.new do |s|
-  s.name = "entitlements"
+  s.name = "entitlements-app"
   s.version = File.read("VERSION").chomp
   s.summary = "git-managed LDAP group configurations"
   s.description = "The Ruby Gem that Powers Entitlements - GitHub's Identity and Access Management System"
@@ -11,6 +11,7 @@ Gem::Specification.new do |s|
   s.files = Dir.glob("lib/**/*") + %w[bin/deploy-entitlements VERSION]
   s.homepage = "https://github.com/github/entitlements-app"
   s.executables = %w[deploy-entitlements]
+  s.required_ruby_version = '~> 2.0'
 
   s.add_dependency "concurrent-ruby", "= 1.1.9"
   s.add_dependency "contracts", "= 0.16.0"
