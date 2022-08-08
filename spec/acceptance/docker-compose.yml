@@ -5,7 +5,7 @@ networks:
     internal: true
 
 services:
-  entitlements:
+  entitlements-app:
     build:
       context: "${DIR}"
       dockerfile: "spec/acceptance/Dockerfile.entitlements-app"
