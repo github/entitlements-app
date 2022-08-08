@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    entitlements-app (0.1.6)
+    entitlements-app (0.1.7)
       concurrent-ruby (= 1.1.9)
       contracts (= 0.16.0)
       faraday (>= 0.17.3, < 0.18)
