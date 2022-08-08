@@ -1,11 +1,12 @@
-#!/bin/sh
+#!/bin/bash
 # Tag and push a release.
 
 set -e
 
 # Make sure we're in the project root.
 
-cd $(dirname "$0")/..
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
+cd ${DIR}/..
 
 # Build a new gem archive.
 
