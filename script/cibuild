@@ -2,5 +2,5 @@
 set -e
 
 cd "$(dirname "$0")/.."
-docker build -t entitlements -f spec/acceptance/Dockerfile.entitlements-app .
-docker run -w "/data/entitlements-app" entitlements bash -c "script/test"
+docker build -t entitlements-app -f spec/acceptance/Dockerfile.entitlements-app .
+docker run -w "/data/entitlements-app" entitlements-app bash -c "script/test"
