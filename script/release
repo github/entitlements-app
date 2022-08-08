@@ -2,16 +2,17 @@
 # Tag and push a release.
 
 set -e
+set -x
 
 # Make sure we're in the project root.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
-cd ${DIR}/..
+cd ${DIR}
 
 # Build a new gem archive.
 
-rm -rf entitlements-*.gem
-gem build -q entitlements.gemspec
+rm -rf entitlements-app-*.gem
+gem build -q entitlements-app.gemspec
 
 # Make sure we're on the main branch.
 
@@ -22,7 +23,7 @@ gem build -q entitlements.gemspec
 
 # Figure out what version we're releasing.
 
-tag=v`ls entitlements-*.gem | sed 's/^entitlements-\(.*\)\.gem$/\1/'`
+tag=v`ls entitlements-app-*.gem | sed 's/^entitlements-app-\(.*\)\.gem$/\1/'`
 
 # Make sure we haven't released this version before.
 
@@ -35,5 +36,5 @@ git fetch -t origin
 
 # Tag it and bag it.
 
-gem push entitlements-*.gem && git tag "$tag" &&
+gem push entitlements-app-*.gem && git tag "$tag" &&
   git push origin main && git push origin "$tag"
