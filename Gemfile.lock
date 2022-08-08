@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    entitlements (0.1.6)
+    entitlements-app (0.1.6)
       concurrent-ruby (= 1.1.9)
       contracts (= 0.16.0)
       faraday (>= 0.17.3, < 0.18)
@@ -33,7 +33,7 @@ GEM
       concurrent-ruby (~> 1.0)
     json (2.6.2)
     minitest (5.15.0)
-    multipart-post (2.2.2)
+    multipart-post (2.2.3)
     net-ldap (0.17.1)
     octokit (4.22.0)
       faraday (>= 0.9)
@@ -108,7 +108,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  entitlements!
+  entitlements-app!
   rake (= 13.0.6)
   rspec (= 3.8.0)
   rspec-core (= 3.8.0)
