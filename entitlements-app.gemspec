@@ -12,6 +12,8 @@ Gem::Specification.new do |s|
   s.homepage = "https://github.com/github/entitlements-app"
   s.executables = %w[deploy-entitlements]
 
+  s.required_ruby_version '~> 2.0'
+
   s.add_dependency "concurrent-ruby", "= 1.1.9"
   s.add_dependency "contracts", "= 0.16.0"
   s.add_dependency "faraday", ">= 0.17.3", "< 0.18"
