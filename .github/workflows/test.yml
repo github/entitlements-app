@@ -24,6 +24,4 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-
-      - name: rspec tests
-        run: script/test -d
+      - run: script/test -d

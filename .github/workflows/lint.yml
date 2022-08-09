@@ -24,6 +24,4 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-
-      - name: rubocop
-        run: bundle exec rubocop -c .rubocop.yml lib/ spec/
+      - run: bundle exec rubocop -c .rubocop.yml lib/ spec/
