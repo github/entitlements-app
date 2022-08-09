@@ -1,10 +1,34 @@
 # frozen_string_literal: true
 
+module Entitlements
+  # Allows maintaining version compatibility with older versions of Ruby
+  # :nocov:
+  def self.ruby_version2?
+    @ruby_version2 ||= (
+        Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("2.0.0") &&
+        Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.0.0")
+    )
+  end
+
+  def self.ruby_version3?
+    @ruby_version3 ||= (Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.0.0"))
+  end
+  # :nocov:
+end
+
 # Hey there! With our use of the "contracts" module, load order is important.
 
 # Load third party dependencies first.
 require "concurrent"
+
+# Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
+if Entitlements.ruby_version2?
+  require_relative "contracts-ruby2/contracts"
+else
+  require_relative "contracts-ruby3/contracts"
+end
 require "contracts"
+
 require "erb"
 require "logger"
 require "ostruct"
@@ -57,20 +81,6 @@ module Entitlements
   C = ::Contracts
 
   IGNORED_FILES = Set.new(%w[README.md PR_TEMPLATE.md])
-
-  # Allows maintaining version compatibility with older versions of Ruby
-  # :nocov:
-  def self.ruby_version2?
-    @ruby_version2 ||= (
-        Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("2.0.0") &&
-        Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.0.0")
-    )
-  end
-
-  def self.ruby_version3?
-    @ruby_version3 ||= (Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.0.0"))
-  end
-  # :nocov:
 
   # Allows interpretation of ERB for the configuration file to make things less hokey.
   class ERB < OpenStruct
