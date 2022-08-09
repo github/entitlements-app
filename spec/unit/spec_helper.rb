@@ -4,9 +4,9 @@ require "base64"
 
 # Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
 if (Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.0.0")) # ruby3
-  $LOAD_PATH.unshift(File.expand_path("../lib/contracts-ruby3/lib"))
+  $LOAD_PATH.unshift(File.expand_path("../../lib/contracts-ruby3/lib"))
 else # ruby2
-  $LOAD_PATH.unshift(File.expand_path("../lib/contracts-ruby2/lib"))
+  $LOAD_PATH.unshift(File.expand_path("../../lib/contracts-ruby2/lib"))
 end
 
 require "contracts"
