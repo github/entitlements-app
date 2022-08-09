@@ -1,29 +1,13 @@
 # frozen_string_literal: true
 
-module Entitlements
-  # Allows maintaining version compatibility with older versions of Ruby
-  # :nocov:
-  def self.ruby_version2?
-    @ruby_version2 ||= (
-        Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("2.0.0") &&
-        Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.0.0")
-    )
-  end
-
-  def self.ruby_version3?
-    @ruby_version3 ||= (Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.0.0"))
-  end
-  # :nocov:
-end
-
 # Hey there! With our use of the "contracts" module, load order is important.
-
 # Load third party dependencies first.
 require "concurrent"
+require "ruby-version-check"
 
 # Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
 # :nocov:
-if Entitlements.ruby_version2?
+if RubyVersionCheck.ruby_version2?
   $LOAD_PATH.unshift(File.expand_path(File.join(__dir__, "contracts-ruby2/lib")))
 else
   $LOAD_PATH.unshift(File.expand_path(File.join(__dir__, "contracts-ruby3/lib")))

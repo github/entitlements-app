@@ -33,7 +33,7 @@ module Entitlements
             end
 
             # :nocov:
-            if Entitlements.ruby_version2?
+            if RubyVersionCheck.ruby_version2?
               ::YAML.load(File.read(manager_map_file)).to_h
             else
               ::YAML.load(File.read(manager_map_file), permitted_classes: [Date]).to_h

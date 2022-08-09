@@ -58,7 +58,7 @@ module Entitlements
                 person_dn_format: config.fetch("person_dn_format")
               }
               opts[:disable_ssl_verification] = true if config.fetch("disable_ssl_verification", false)
-              if Entitlements.ruby_version2?
+              if RubyVersionCheck.ruby_version2?
                 Entitlements::Service::LDAP.new_with_cache(opts)
               else
                 Entitlements::Service::LDAP.new_with_cache(**opts)
