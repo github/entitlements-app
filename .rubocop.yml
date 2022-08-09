@@ -10,6 +10,8 @@ AllCops:
     - 'spec/acceptance/fixtures/**/*'
     - 'spec/unit/fixtures/**/*'
     - 'vendor/gems/**/*'
+    - 'lib/contracts-ruby2/**/*'
+    - 'lib/contracts-ruby3/**/*'
 
 Style/HashSyntax:
   EnforcedShorthandSyntax: either
