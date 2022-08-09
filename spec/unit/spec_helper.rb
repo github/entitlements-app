@@ -1,7 +1,14 @@
 # frozen_string_literal: true
 
 require "base64"
-require "contracts"
+
+# Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
+if Entitlements.ruby_version2?
+  require_relative "../../lib/contracts-ruby2/contracts"
+else
+  require_relative "../../lib/contracts-ruby3/contracts"
+end
+
 require "json"
 require "rspec"
 require "rspec/support"

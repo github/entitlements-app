@@ -27,7 +27,6 @@ if Entitlements.ruby_version2?
 else
   require_relative "contracts-ruby3/contracts"
 end
-require "contracts"
 
 require "erb"
 require "logger"
