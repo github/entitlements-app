@@ -23,9 +23,9 @@ require "concurrent"
 
 # Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
 if Entitlements.ruby_version2?
-  require_relative "contracts-ruby2/contracts"
+  require_relative "contracts-ruby2/lib/contracts"
 else
-  require_relative "contracts-ruby3/contracts"
+  require_relative "contracts-ruby3/lib/contracts"
 end
 
 require "erb"

@@ -4,9 +4,9 @@ require "base64"
 
 # Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
 if (Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.0.0")) # ruby3
-  require_relative "../../lib/contracts-ruby3/contracts"
+  require_relative "../../lib/contracts-ruby3/lib/contracts"
 else # ruby2
-  require_relative "../../lib/contracts-ruby2/contracts"
+  require_relative "../../lib/contracts-ruby2/lib/contracts"
 end
 
 require "json"
