@@ -10,6 +10,8 @@ else # ruby2
   $LOAD_PATH.unshift(File.expand_path(File.join(__dir__, "../lib/contracts-ruby2/lib")))
 end
 
+require "contracts"
+
 # We don't need Contract outside of normal development
 VALID = [true, nil]
 class Contract < Contracts::Decorator
