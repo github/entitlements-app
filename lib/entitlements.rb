@@ -23,9 +23,9 @@ require "concurrent"
 
 # Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
 if Entitlements.ruby_version2?
-  $LOAD_PATH.unshift(File.expand_path("../lib/contracts-ruby2/lib"))
+  $LOAD_PATH.unshift(File.expand_path("../contracts-ruby2/lib"))
 else
-  $LOAD_PATH.unshift(File.expand_path("../lib/contracts-ruby3/lib"))
+  $LOAD_PATH.unshift(File.expand_path("../contracts-ruby3/lib"))
 end
 
 require "contracts"
