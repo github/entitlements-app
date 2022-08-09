@@ -12,7 +12,7 @@ end
 
 # We don't need Contract outside of normal development
 VALID = [true, nil]
-class Contract
+class Contract < Contracts::Decorator
   def self.valid?(arg, contract)
     VALID
   end
