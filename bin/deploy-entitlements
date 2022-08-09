@@ -2,7 +2,9 @@
 
 ENV["BUNDLE_GEMFILE"] = File.expand_path("../Gemfile", File.dirname(__FILE__))
 require "bundler/setup"
-require "contracts"
+
+# Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
+require_relative "../lib/contracts-ruby2/contracts"
 
 # We don't need Contract outside of normal development
 VALID = [true, nil]
