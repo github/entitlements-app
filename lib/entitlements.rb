@@ -3,7 +3,7 @@
 # Hey there! With our use of the "contracts" module, load order is important.
 # Load third party dependencies first.
 require "concurrent"
-require "ruby-version-check"
+require "ruby_version_check"
 
 # Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
 # :nocov:
