@@ -9,8 +9,6 @@ else # ruby2
   $LOAD_PATH.unshift(File.expand_path(File.join(__dir__, "../../lib/contracts-ruby2/lib")))
 end
 
-STDERR.puts $LOAD_PATH.inspect
-
 require "contracts"
 require "json"
 require "rspec"

@@ -22,11 +22,13 @@ end
 require "concurrent"
 
 # Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
+# :nocov:
 if Entitlements.ruby_version2?
   $LOAD_PATH.unshift(File.join(__dir__, File.expand_path("../contracts-ruby2/lib")))
 else
   $LOAD_PATH.unshift(File.join(__dir__, File.expand_path("../contracts-ruby3/lib")))
 end
+# :nocov:
 
 require "contracts"
 require "erb"
