@@ -11,7 +11,6 @@ Gem::Specification.new do |s|
   s.files = Dir.glob("lib/**/*") + %w[bin/deploy-entitlements VERSION]
   s.homepage = "https://github.com/github/entitlements-app"
   s.executables = %w[deploy-entitlements]
-  s.required_ruby_version = '~> 3.0'
 
   s.add_dependency "concurrent-ruby", "= 1.1.9"
   s.add_dependency "faraday", ">= 0.17.3", "< 0.18"
