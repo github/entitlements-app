@@ -4,7 +4,11 @@ ENV["BUNDLE_GEMFILE"] = File.expand_path("../Gemfile", File.dirname(__FILE__))
 require "bundler/setup"
 
 # Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
-require_relative "../lib/contracts-ruby2/contracts"
+if (Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.0.0")) # ruby3
+  require_relative "../lib/contracts-ruby3/contracts"
+else # ruby2
+  require_relative "../lib/contracts-ruby2/contracts"
+end
 
 # We don't need Contract outside of normal development
 VALID = [true, nil]
