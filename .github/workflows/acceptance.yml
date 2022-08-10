@@ -62,6 +62,10 @@ jobs:
 
     steps:
 
+      - uses: actions/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+
       # If source files were not changed, we don't need the acceptance test suite
       - name: bypass
         if: ${{ needs.changes.outputs.has_change != 'true' }}
@@ -80,11 +84,7 @@ jobs:
 
       - name: acceptance tests
         if: ${{ needs.changes.outputs.has_change == 'true' }}
-        steps:
-          - uses: actions/setup-ruby@v1
-            with:
-              ruby-version: ${{ matrix.ruby }}
-          - run: script/cibuild-entitlements-app-acceptance
+        run: script/cibuild-entitlements-app-acceptance
 
       - name: acceptance tests passed
         run: echo "✅ The acceptance test suite has passed"
