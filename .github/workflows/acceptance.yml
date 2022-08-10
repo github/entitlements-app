@@ -80,10 +80,11 @@ jobs:
 
       - name: acceptance tests
         if: ${{ needs.changes.outputs.has_change == 'true' }}
-        uses: actions/setup-ruby@v1
-        with:
-          ruby-version: ${{ matrix.ruby }}
-        run: script/cibuild-entitlements-app-acceptance
+        steps:
+          - uses: actions/setup-ruby@v1
+            with:
+              ruby-version: ${{ matrix.ruby }}
+          - run: script/cibuild-entitlements-app-acceptance
 
       - name: acceptance tests passed
         run: echo "✅ The acceptance test suite has passed"

@@ -5,7 +5,7 @@
 require "concurrent"
 require "ruby_version_check"
 
-# Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
+# contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
 # :nocov:
 if RubyVersionCheck.ruby_version2?
   $LOAD_PATH.unshift(File.expand_path(File.join(__dir__, "contracts-ruby2/lib")))
