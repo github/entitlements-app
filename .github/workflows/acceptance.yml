@@ -10,6 +10,9 @@ jobs:
   # Detects changes to any of the source files for entitlements-app
   changes:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby: [ '2.7.5', '3.1.2' ]
     permissions:
       contents: read
 
@@ -45,7 +48,7 @@ jobs:
 
             # If the diff file is not empty, it has changes.
             [ -s diff.txt ] && echo "::set-output name=has_change::true" || echo "::set-output name=has_change::false"
-  
+
       - name: set has_change to true for push to main/master
         if: github.event_name == 'push'
         run: echo "::set-output name=has_change::true"
@@ -77,6 +80,9 @@ jobs:
 
       - name: acceptance tests
         if: ${{ needs.changes.outputs.has_change == 'true' }}
+        uses: actions/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
         run: script/cibuild-entitlements-app-acceptance
 
       - name: acceptance tests passed
