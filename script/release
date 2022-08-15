@@ -10,8 +10,9 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
 cd ${DIR}
 
 # Build a new gem archive.
+rm -rf entitlements-*.gem
 
-rm -rf entitlements-app-*.gem
+GEM_NAME='entitlements' gem build -q entitlements-app.gemspec
 gem build -q entitlements-app.gemspec
 
 # Make sure we're on the main branch.
@@ -36,5 +37,6 @@ git fetch -t origin
 
 # Tag it and bag it.
 
-gem push entitlements-app-*.gem && git tag "$tag" &&
-  git push origin main && git push origin "$tag"
+gem push entitlements-app-*.gem && rm -f entitlements-app-*.gem
+gem push entitlements-*.gem && rm -f entitlements-*.gem
+git tag "$tag" &&  git push origin main &&  git push origin "$tag"
