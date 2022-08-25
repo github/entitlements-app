@@ -109,6 +109,3 @@ DEPENDENCIES
   simplecov-erb (= 0.1.1)
   vcr (= 4.0.0)
   webmock (= 3.4.2)
-
-BUNDLED WITH
-   2.3.9
