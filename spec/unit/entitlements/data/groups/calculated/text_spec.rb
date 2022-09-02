@@ -438,6 +438,23 @@ describe Entitlements::Data::Groups::Calculated::Text do
         end
       end
 
+      context "already expired but expirations are disabled" do
+        let(:filename) { fixture("ldap-config/text/expiration-already-expired.txt") }
+
+        it "constructs the correct rule set" do
+          Entitlements.config["ignore_expirations"] = true
+          answer = {
+            "or" => [
+              { "username" => "blackmanx" },
+              { "username" => "russianblue" },
+              { "username" => "mainecoon" }
+            ]
+          }
+          result = subject.send(:rules)
+          expect(result).to eq(answer)
+        end
+      end
+
       context "mix of not expired and already expired" do
         let(:filename) { fixture("ldap-config/text/expiration-mixed-expired.txt") }
 

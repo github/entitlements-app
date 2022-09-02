@@ -213,6 +213,7 @@ module Entitlements
           # Returns true if expired, false if not expired.
           Contract C::Or[nil, String], String => C::Or[nil, C::Bool]
           def expired?(expiration, context)
+            return false if Entitlements.config.fetch("ignore_expirations", false)
             return false if expiration.nil? || expiration.strip.empty?
             if expiration =~ /\A(\d{4})-(\d{2})-(\d{2})\z/
               year, month, day = Regexp.last_match(1).to_i, Regexp.last_match(2).to_i, Regexp.last_match(3).to_i

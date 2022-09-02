@@ -31,6 +31,16 @@ describe Entitlements::Data::Groups::Calculated::Modifiers::Expiration do
         obj = Entitlements::Data::Groups::Calculated.read("cn=expired-text,ou=Felines,ou=Groups,dc=example,dc=net")
         expect(obj.members).to eq(Set.new)
       end
+
+      it "returns members if expiration is disabled in the configuration" do
+        Entitlements.config["ignore_expirations"] = true
+        allow(Entitlements::Util::Util).to receive(:path_for_group).with(ou_key).and_return(fixture("ldap-config/#{ou_key}"))
+        Entitlements::Data::Groups::Calculated.read_all(ou_key, cfg_obj)
+        obj = Entitlements::Data::Groups::Calculated.read("cn=expired-text,ou=Felines,ou=Groups,dc=example,dc=net")
+        expected_result = %w[russianblue mainecoon]
+        answer_set = Set.new(expected_result.map { |name| people_obj.read[name] })
+        expect(obj.members).to eq(answer_set)
+      end
     end
 
     context "expired text file with no valid non-expired conditions" do
