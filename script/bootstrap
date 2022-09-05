@@ -9,6 +9,6 @@ export RBENV_VERSION="$(cat .ruby-version)"
 rm -rf "${DIR}/.bundle"
 
 # Using Deprecated Flags to avoid pulling from upstream
-bundle install --path vendor/gems --local --clean
+bundle install --local
 
 bundle binstubs rake rspec-core rubocop
