@@ -1,12 +1,10 @@
 PATH
   remote: .
   specs:
-    entitlements (0.1.6)
+    entitlements-app (0.1.8)
       concurrent-ruby (= 1.1.9)
       contracts (= 0.16.0)
-      faraday (>= 0.17.3, < 0.18)
       net-ldap (~> 0.17.0)
-      octokit (~> 4.18)
       optimist (= 3.0.0)
 
 GEM
@@ -22,23 +20,16 @@ GEM
     ast (2.4.2)
     concurrent-ruby (1.1.9)
     contracts (0.16.0)
-    contracts-rspec (0.1.0)
     crack (0.4.5)
       rexml
     diff-lcs (1.5.0)
     docile (1.4.0)
-    faraday (0.17.5)
-      multipart-post (>= 1.2, < 3)
     hashdiff (1.0.1)
     i18n (1.10.0)
       concurrent-ruby (~> 1.0)
     json (2.6.2)
     minitest (5.15.0)
-    multipart-post (2.2.2)
     net-ldap (0.17.1)
-    octokit (4.22.0)
-      faraday (>= 0.9)
-      sawyer (~> 0.8.0, >= 0.5.3)
     optimist (3.0.0)
     parallel (1.22.1)
     parser (3.1.2.0)
@@ -86,9 +77,6 @@ GEM
       rubocop (>= 1.7.0, < 2.0)
     ruby-progressbar (1.11.0)
     rugged (0.27.5)
-    sawyer (0.8.2)
-      addressable (>= 2.3.5)
-      faraday (> 0.8, < 2.0)
     simplecov (0.16.1)
       docile (~> 1.1)
       json (>= 1.8, < 3)
@@ -109,8 +97,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  contracts-rspec (= 0.1.0)
-  entitlements!
+  entitlements-app!
   rake (= 13.0.6)
   rspec (= 3.8.0)
   rspec-core (= 3.8.0)
@@ -124,4 +111,4 @@ DEPENDENCIES
   webmock (= 3.4.2)
 
 BUNDLED WITH
-   2.3.8
+   2.3.15
