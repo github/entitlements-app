@@ -14,7 +14,7 @@ Gem::Specification.new do |s|
 
   s.add_dependency "concurrent-ruby", "= 1.1.9"
   s.add_dependency "faraday", "~> 2.0"
-  s.add_dependency "net-ldap", "~> 0.17.0"
+  s.add_dependency "net-ldap", "~> 0.17"
   s.add_dependency "octokit", "~> 4.18"
   s.add_dependency "optimist", "= 3.0.0"
 
@@ -27,7 +27,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency "rubocop-performance", "= 1.13.3"
   s.add_development_dependency "rugged", "= 0.27.5"
   s.add_development_dependency "simplecov", "= 0.16.1"
-  s.add_development_dependency "simplecov-erb", "= 0.1.1"
+  s.add_development_dependency "simplecov-erb", "= 1.0.1"
   s.add_development_dependency "vcr", "= 4.0.0"
   s.add_development_dependency "webmock", "3.4.2"
 end

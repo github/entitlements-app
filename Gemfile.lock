@@ -4,7 +4,7 @@ PATH
     entitlements-app (0.2.0)
       concurrent-ruby (= 1.1.9)
       faraday (~> 2.0)
-      net-ldap (~> 0.17.0)
+      net-ldap (~> 0.17)
       octokit (~> 4.18)
       optimist (= 3.0.0)
 
@@ -100,8 +100,8 @@ GEM
       docile (~> 1.1)
       json (>= 1.8, < 3)
       simplecov-html (~> 0.10.0)
-    simplecov-erb (0.1.1)
-      simplecov
+    simplecov-erb (1.0.1)
+      simplecov (< 1.0)
     simplecov-html (0.10.2)
     tzinfo (2.0.5)
       concurrent-ruby (~> 1.0)
@@ -127,7 +127,7 @@ DEPENDENCIES
   rubocop-performance (= 1.13.3)
   rugged (= 0.27.5)
   simplecov (= 0.16.1)
-  simplecov-erb (= 0.1.1)
+  simplecov-erb (= 1.0.1)
   vcr (= 4.0.0)
   webmock (= 3.4.2)
 
