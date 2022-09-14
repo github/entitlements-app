@@ -1,9 +1,20 @@
 # frozen_string_literal: true
 
 # Hey there! With our use of the "contracts" module, load order is important.
-
 # Load third party dependencies first.
 require "concurrent"
+require "ruby_version_check"
+
+# contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
+
+# :nocov:
+if RubyVersionCheck.ruby_version2?
+  $LOAD_PATH.unshift(File.expand_path(File.join(__dir__, "contracts-ruby2/lib")))
+else
+  $LOAD_PATH.unshift(File.expand_path(File.join(__dir__, "contracts-ruby3/lib")))
+end
+# :nocov:
+
 require "contracts"
 require "erb"
 require "logger"
@@ -65,7 +76,7 @@ module Entitlements
     end
 
     def render(template)
-      ::ERB.new(template, nil, "-").result(binding)
+      ::ERB.new(template, trim_mode: "-").result(binding)
     end
   end
 

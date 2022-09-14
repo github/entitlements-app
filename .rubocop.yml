@@ -4,9 +4,14 @@ inherit_gem:
 
 AllCops:
   DisplayCopNames: true
-  TargetRubyVersion: 2.7.5
+  TargetRubyVersion: 3.1.2
   Exclude:
     - 'bin/*'
     - 'spec/acceptance/fixtures/**/*'
     - 'spec/unit/fixtures/**/*'
     - 'vendor/gems/**/*'
+    - 'lib/contracts-ruby2/**/*'
+    - 'lib/contracts-ruby3/**/*'
+
+Style/HashSyntax:
+  EnforcedShorthandSyntax: either
