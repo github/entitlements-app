@@ -32,7 +32,13 @@ module Entitlements
               raise Errno::ENOENT, "The `manager_map_file` #{manager_map_file} does not exist!"
             end
 
-            YAML.load(File.read(manager_map_file))
+            # :nocov:
+            if RubyVersionCheck.ruby_version2?
+              ::YAML.load(File.read(manager_map_file)).to_h
+            else
+              ::YAML.load(File.read(manager_map_file), permitted_classes: [Date]).to_h
+            end
+            # :nocov:
           end
 
           u = person.uid.downcase

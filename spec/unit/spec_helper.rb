@@ -1,6 +1,15 @@
 # frozen_string_literal: true
 
+require "ruby_version_check"
 require "base64"
+
+# Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
+if RubyVersionCheck.ruby_version2?
+  $LOAD_PATH.unshift(File.expand_path(File.join(__dir__, "../../lib/contracts-ruby2/lib")))
+else
+  $LOAD_PATH.unshift(File.expand_path(File.join(__dir__, "../../lib/contracts-ruby3/lib")))
+end
+
 require "contracts"
 require "json"
 require "rspec"
@@ -123,6 +132,7 @@ module Contracts
       def instance_double(klass, *args)
         super.tap do |double|
           allow(double).to receive(:is_a?).with(klass).and_return(true)
+          allow(double).to receive(:is_a?).with(ParamContractError).and_return(false)
         end
       end
     end

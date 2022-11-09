@@ -2,11 +2,20 @@
 
 ENV["BUNDLE_GEMFILE"] = File.expand_path("../Gemfile", File.dirname(__FILE__))
 require "bundler/setup"
+require "ruby_version_check"
+
+# Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
+if RubyVersionCheck.ruby_version2?
+  $LOAD_PATH.unshift(File.expand_path(File.join(__dir__, "../lib/contracts-ruby2/lib")))
+else
+  $LOAD_PATH.unshift(File.expand_path(File.join(__dir__, "../lib/contracts-ruby3/lib")))
+end
+
 require "contracts"
 
 # We don't need Contract outside of normal development
 VALID = [true, nil]
-class Contract
+class Contract < Contracts::Decorator
   def self.valid?(arg, contract)
     VALID
   end

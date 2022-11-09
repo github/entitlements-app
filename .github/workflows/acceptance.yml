@@ -45,7 +45,7 @@ jobs:
 
             # If the diff file is not empty, it has changes.
             [ -s diff.txt ] && echo "::set-output name=has_change::true" || echo "::set-output name=has_change::false"
-  
+
       - name: set has_change to true for push to main/master
         if: github.event_name == 'push'
         run: echo "::set-output name=has_change::true"
@@ -54,10 +54,16 @@ jobs:
     needs: changes
     runs-on: ubuntu-latest
     name: runner / acceptance-tests
+    strategy:
+      matrix:
+        ruby: [ '2.7.5', '3.1.2' ]
     permissions:
       contents: read
 
     steps:
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
 
       # If source files were not changed, we don't need the acceptance test suite
       - name: bypass

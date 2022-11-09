@@ -5,8 +5,16 @@ export APP_NAME="entitlements-app"
 export GIT_SERVER_NAME="git-server"
 export LDAP_SERVER_NAME="ldap-server"
 
-if [ ! -f "${DIR}/spec/acceptance/Dockerfile.${APP_NAME}" ]; then
-  echo "No Dockerfile.${APP_NAME} was found"
+export RUBY_MAJOR_VERSION=$(ruby --version | awk '{print $2}' | awk -F. '{print $1}')
+
+if [ $RUBY_MAJOR_VERSION -eq 2 ]; then
+  export DOCKERFILE="Dockerfile.${APP_NAME}-ruby2"
+else
+  export DOCKERFILE="Dockerfile.${APP_NAME}"
+fi
+
+if [ ! -f "${DIR}/spec/acceptance/${DOCKERFILE}" ]; then
+  echo "No ${DOCKERFILE} was found"
   exit 255
 fi
 
