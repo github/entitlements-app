@@ -22,6 +22,7 @@ module Entitlements
             # Return true if we made any changes, false otherwise.
             Contract C::SetOf[Entitlements::Models::Person] => C::Bool
             def modify(result)
+              return false if Entitlements.config.fetch("ignore_expirations", false)
               # If group is already empty, we have nothing to consider modifying, regardless
               # of expiration date. Just return false right away.
               if result.empty?
