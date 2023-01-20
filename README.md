@@ -24,10 +24,6 @@ Entitlements requires an initial Org Chart configuration to define all of the va
 
 See [orgchart](docs/orgchart.md) for a complete guide to configuring your org chart data.
 
-To take advantage of the full entitlements re-organization functionality, your org chart data should be automatically updated as changes happen to your organization.
-
-See [reorgs](docs/reorgs.md) for examples of how Entitlements helps with re-orgs.
-
 ## Configuration
 
 ### Metadata
