@@ -104,12 +104,11 @@ describe Entitlements::Util::Util do
     let(:key) { "foo/bar" }
 
     context "when called with a group not defined in the configuration" do
-      let(:entitlements_config_hash) { { "groups" => {} } }
+      let(:entitlements_config_hash) { { "configuration_path" => "/bar", "groups" => {} } }
 
-      it "raises" do
-        expect do
-          described_class.path_for_group(key)
-        end.to raise_error(ArgumentError, 'path_for_group: Group "foo/bar" is not defined in the entitlements configuration!')
+      it "returns the entitlements path + group key" do
+        allow(File).to receive(:directory?).with("/bar/foo/bar").and_return(true)
+        expect(described_class.path_for_group(key)).to eq("/bar/foo/bar")
       end
     end
 

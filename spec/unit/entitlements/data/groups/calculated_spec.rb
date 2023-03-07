@@ -115,7 +115,7 @@ describe Entitlements::Data::Groups::Calculated do
         Entitlements.config_file = fixture("config.yaml")
         expect do
           described_class.read_all("aldfkdflakjalsdfkj", cfg_obj)
-        end.to raise_error(ArgumentError, 'path_for_group: Group "aldfkdflakjalsdfkj" is not defined in the entitlements configuration!')
+        end.to raise_error(%r{Non-existing directory})
       end
     end
   end
