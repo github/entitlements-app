@@ -75,11 +75,11 @@ module Entitlements
       # Returns a String with the full directory path to the group.
       Contract String => String
       def self.path_for_group(group)
-        unless Entitlements.config["groups"].key?(group)
-          raise ArgumentError, "path_for_group: Group #{group.inspect} is not defined in the entitlements configuration!"
+        dir = nil
+        if Entitlements.config["groups"].key?(group)
+          dir = Entitlements.config["groups"][group]["dir"]
         end
 
-        dir = Entitlements.config["groups"][group]["dir"]
         result_dir = if dir.nil?
           File.join(Entitlements.config_path, group)
         elsif dir.start_with?("/")
