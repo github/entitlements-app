@@ -239,8 +239,6 @@ module Entitlements
                 verify_mode: @disable_ssl_verification ? OpenSSL::SSL::VERIFY_NONE : OpenSSL::SSL::VERIFY_PEER
               }
             }
-          else
-            ldap_options[:encryption] = { method: nil }
           end
 
           if @ca_file && ldap_options[:encryption].key?(:tls_options)
