@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    entitlements-app (0.2.0)
+    entitlements-app (0.2.1)
       concurrent-ruby (= 1.1.9)
       faraday (~> 2.0)
       net-ldap (~> 0.17)
@@ -27,10 +27,10 @@ GEM
       reline (>= 0.3.1)
     diff-lcs (1.5.0)
     docile (1.4.0)
-    faraday (2.5.2)
+    faraday (2.7.4)
       faraday-net_http (>= 2.0, < 3.1)
       ruby2_keywords (>= 0.0.4)
-    faraday-net_http (3.0.0)
+    faraday-net_http (3.0.2)
     hashdiff (1.0.1)
     i18n (1.12.0)
       concurrent-ruby (~> 1.0)
