@@ -64,7 +64,6 @@ describe Entitlements::Service::LDAP do
           .with(
             host: "ldap.example.net",
             port: 389,
-            encryption: { method: nil },
             auth: {
               method: :simple,
               username: "uid=some-user,ou=system-accounts,dc=example,dc=net",
