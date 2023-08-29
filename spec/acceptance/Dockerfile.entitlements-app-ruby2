@@ -17,7 +17,8 @@ RUN gem install bundler
 # Bootstrap files and caching for speed
 COPY "vendor/cache/" "/data/entitlements-app/vendor/cache/"
 COPY "script/" "/data/entitlements-app/script/"
-COPY [".rubocop.yml", ".ruby-version", "entitlements-app.gemspec", "Gemfile", "Gemfile.lock", "VERSION", "/data/entitlements-app/"]
+COPY [".rubocop.yml", ".ruby-version", "entitlements-app.gemspec", "Gemfile", "Gemfile.lock", "/data/entitlements-app/"]
+COPY "lib/version.rb" "/data/entitlements/lib/version.rb"
 
 # Source Files
 COPY "bin/" "/data/entitlements-app/bin/"
