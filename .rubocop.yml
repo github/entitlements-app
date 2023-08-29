@@ -3,10 +3,12 @@ inherit_gem:
     - config/default.yml
 
 AllCops:
+  SuggestExtensions: false
   DisplayCopNames: true
   TargetRubyVersion: 3.1.2
   Exclude:
     - 'bin/*'
+    - 'vendor/**/*'
     - 'spec/acceptance/fixtures/**/*'
     - 'spec/unit/fixtures/**/*'
     - 'vendor/gems/**/*'

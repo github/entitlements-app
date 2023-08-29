@@ -17,7 +17,7 @@ jobs:
       has_change: ${{ steps.diff.outputs.has_change}}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - id: fetch-base
         if: github.event_name == 'pull_request'
@@ -61,8 +61,9 @@ jobs:
       contents: read
 
     steps:
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@250fcd6a742febb1123a77a841497ccaa8b9e939 # pin@v1.152.0
         with:
+          bundler-cache: true
           ruby-version: ${{ matrix.ruby }}
 
       # If source files were not changed, we don't need the acceptance test suite
@@ -71,9 +72,9 @@ jobs:
         run: |
           echo "✅ Bypassing acceptance tests - they are not required for this change"
 
-      - name: Check out code
+      - name: checkout
         if: ${{ needs.changes.outputs.has_change == 'true' }}
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Use Docker layer caching for 'docker build' and 'docker-compose build' commands.
       # https://github.com/satackey/action-docker-layer-caching/releases/tag/v0.0.11

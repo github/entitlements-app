@@ -17,11 +17,12 @@ jobs:
       contents: read
 
     steps:
-      - name: Check out code
-        uses: actions/checkout@v2
+      - name: checkout
+        uses: actions/checkout@v3
 
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@250fcd6a742febb1123a77a841497ccaa8b9e939 # pin@v1.152.0
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
+
       - run: script/test -d

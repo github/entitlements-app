@@ -1,14 +1,16 @@
 # frozen_string_literal: true
 
+require_relative "lib/version"
+
 Gem::Specification.new do |s|
-  s.name = ENV['GEM_NAME'] ? ENV['GEM_NAME'] : 'entitlements-app'
-  s.version = File.read("VERSION").chomp
+  s.name = ENV["GEM_NAME"] ? ENV["GEM_NAME"] : "entitlements-app"
+  s.version = Entitlements::Version::VERSION
   s.summary = "git-managed LDAP group configurations"
   s.description = "The Ruby Gem that Powers Entitlements - GitHub's Identity and Access Management System"
   s.authors = ["GitHub, Inc. Security Ops"]
   s.email = "opensource+entitlements-app@github.com"
   s.license = "MIT"
-  s.files = Dir.glob("lib/**/*") + %w[bin/deploy-entitlements VERSION]
+  s.files = Dir.glob("lib/**/*") + %w[bin/deploy-entitlements]
   s.homepage = "https://github.com/github/entitlements-app"
   s.executables = %w[deploy-entitlements]
 
