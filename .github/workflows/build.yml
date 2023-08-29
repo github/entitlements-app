@@ -1,0 +1,41 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - uses: ruby/setup-ruby@250fcd6a742febb1123a77a841497ccaa8b9e939 # pin@v1.152.0
+        with:
+          bundler-cache: true
+
+      - name: bootstrap
+        run: script/bootstrap
+
+      - name: build
+        run: |
+          GEM_NAME=$(ls | grep gemspec | cut -d. -f1)
+          echo "Attempting to build gem $GEM_NAME..."
+          gem build $GEM_NAME
+          if [ $? -eq 0 ]; then
+            echo "Gem built successfully!"
+          else
+            echo "Gem build failed!"
+            exit 1
+          fi
