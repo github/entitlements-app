@@ -8,11 +8,11 @@
 
 See [getting started](docs/getting-started.md) for quick start, and [entitlements-config](https://github.com/github/entitlements-config) for example configuration.
 
-# Inputs
+## Inputs
 
 Entitlements currently supports a single input option of configuration files in the form of `.txt`, `.rb` and `.yaml`.
 
-## Git-managed config
+### Git-managed config
 
 Entitlements receives input from configuration files. By using git to back the config files, every file has a complete and visible audit trail.
 
@@ -48,15 +48,15 @@ For examples on filters, see [filters](docs/filters.md)
 
 There is an example configuration repo [here](https://github.com/github/entitlements-config)
 
-# Outputs
+## Outputs
 
-## LDAP
+### LDAP
 
 Out of the box, Entitlements will output your sets to LDAP.
 
 See the [OpenLDAP documentation](https://www.openldap.org/doc/) for more on LDAP.
 
-# Plugins
+## Plugins
 
 Entitlements is a pluggable system. Plugins can be built for additional inputs and outputs.
 
@@ -69,3 +69,13 @@ Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
 ## Security
 
 We take security very seriously. Please see [SECURITY](SECURITY.md) for details on how to proceed if you find a security issue.
+
+## Release 🚀
+
+To release a new version of this Gem, do the following:
+
+1. Update the version number in the [`lib/version.rb`](lib/version.rb) file
+2. Run `bundle install` to update the `Gemfile.lock` file with the new version
+3. Commit your changes, push them to GitHub, and open a PR
+
+Once your PR is approved and the changes are merged, a new release will be created automatically by the [`release.yml`](.github/workflows/release.yml) workflow. The latest version of the Gem will be published to the GitHub Package Registry and RubyGems.
