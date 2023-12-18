@@ -2,7 +2,6 @@
 
 require "optimist"
 require "datadog/statsd"
-require "resolv"
 
 module Entitlements
   class Cli
