@@ -340,6 +340,21 @@ module Entitlements
     end
   end
 
+  # Global statsd for this run of Entitlements.
+  #
+  # Takes no arguments.
+  #
+  # Returns a Statsd client.
+  # :nocov:
+  def self.statsd
+    @statsd
+  end
+
+  def self.set_statsd(statsd)
+    @statsd = statsd
+  end
+  # :nocov:
+
   # Global logger for this run of Entitlements.
   #
   # Takes no arguments.

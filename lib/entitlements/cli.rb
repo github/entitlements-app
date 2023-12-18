@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "optimist"
+require "datadog/statsd"
+require "resolv"
 
 module Entitlements
   class Cli
@@ -20,6 +22,15 @@ module Entitlements
       logger.level = options[:debug] ? Logger::DEBUG : Logger::INFO
       Entitlements.set_logger(logger)
 
+      # Establish the statsd object.
+      statsd = Datadog::Statsd.new(
+        ENV.fetch("DOGSTATSD_HOST", "localhost"),
+        ENV.fetch("DOGSTATSD_PORT", 8125),
+        tags: ENV.fetch("DOGSTATSD_TAGS", []),
+        namespace: ENV.fetch("DOGSTATSD_NAMESPACE", "entitlements"),
+      )
+      Entitlements.set_statsd(statsd)
+
       # Set up configuration file.
       Entitlements.config_file = options[:"config-file"]
       Entitlements.validate_configuration_file!
@@ -31,13 +42,17 @@ module Entitlements
       end
 
       # Calculate differences.
-      actions = Entitlements.calculate
+      statsd.time("run.time", tags=["step:calculate"]) do
+        actions = Entitlements.calculate
+      end
 
       # No-op mode exits here.
       if @options[:noop]
         logger.info "No-op mode is set. Would make #{Entitlements.cache[:change_count]} change(s)."
         return 0
       end
+
+      statsd.count("changes.count", Entitlements.cache[:change_count])
 
       # No changes?
       if actions.empty?
@@ -46,7 +61,9 @@ module Entitlements
       end
 
       # Execute the changes. This raises if it fails to apply a change or if auditors fail.
-      Entitlements.execute(actions: actions)
+      statsd.time("run.time", tags=["step:execute"]) do
+        Entitlements.execute(actions: actions)
+      end
 
       # Done.
       logger.info "Successfully applied #{Entitlements.cache[:change_count]} change(s)!"
@@ -84,7 +101,7 @@ module Entitlements
 
         Usage:
 
-        $ deploy-entitlements --dir /path/to/configurations
+        $ deploy-entitlements --config-file /path/to/configurations
         .
       EOS
         opt :"config-file",
