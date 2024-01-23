@@ -44,11 +44,11 @@ jobs:
             > diff.txt
 
             # If the diff file is not empty, it has changes.
-            [ -s diff.txt ] && echo "has_change=true" >> $GITHUB_OUTPUT || echo "has_change=false" >> $GITHUB_OUTPUT
+            [ -s diff.txt ] && echo "has_change=true" >> "$GITHUB_OUTPUT" || echo "has_change=false" >> "$GITHUB_OUTPUT"
 
       - name: set has_change to true for push to main/master
         if: github.event_name == 'push'
-        run: echo "has_change=true" >> $GITHUB_OUTPUT
+        run: echo "has_change=true" >> "$GITHUB_OUTPUT"
 
   acceptance-suite:
     needs: changes
