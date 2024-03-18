@@ -22,9 +22,9 @@ GEM
     concurrent-ruby (1.1.9)
     crack (0.4.5)
       rexml
-    debug (1.8.0)
-      irb (>= 1.5.0)
-      reline (>= 0.3.1)
+    debug (1.9.1)
+      irb (~> 1.10)
+      reline (>= 0.3.8)
     diff-lcs (1.5.0)
     docile (1.4.0)
     faraday (2.7.10)
@@ -34,9 +34,10 @@ GEM
     hashdiff (1.0.1)
     i18n (1.14.1)
       concurrent-ruby (~> 1.0)
-    io-console (0.6.0)
-    irb (1.7.4)
-      reline (>= 0.3.6)
+    io-console (0.7.2)
+    irb (1.12.0)
+      rdoc
+      reline (>= 0.4.2)
     json (2.6.3)
     minitest (5.19.0)
     net-ldap (0.18.0)
@@ -48,13 +49,17 @@ GEM
     parser (3.2.2.3)
       ast (~> 2.4.1)
       racc
+    psych (5.1.2)
+      stringio
     public_suffix (5.0.3)
     racc (1.7.1)
     rack (3.0.9.1)
     rainbow (3.1.1)
     rake (13.0.6)
+    rdoc (6.6.2)
+      psych (>= 4.0.0)
     regexp_parser (2.8.1)
-    reline (0.3.8)
+    reline (0.4.3)
       io-console (~> 0.5)
     rexml (3.2.6)
     rspec (3.8.0)
@@ -105,6 +110,7 @@ GEM
     simplecov-erb (1.0.1)
       simplecov (< 1.0)
     simplecov-html (0.10.2)
+    stringio (3.1.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     unicode-display_width (2.4.2)
@@ -118,7 +124,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  debug (> 1.0.0)
+  debug (~> 1.9, >= 1.9.1)
   entitlements-app!
   rake (= 13.0.6)
   rspec (= 3.8.0)
