@@ -3,7 +3,7 @@
 require_relative "lib/version"
 
 Gem::Specification.new do |s|
-  s.name = ENV["GEM_NAME"] ? ENV["GEM_NAME"] : "entitlements-app"
+  s.name = ENV["GEM_NAME"] || "entitlements-app"
   s.version = Entitlements::Version::VERSION
   s.summary = "git-managed LDAP group configurations"
   s.description = "The Ruby Gem that Powers Entitlements - GitHub's Identity and Access Management System"
