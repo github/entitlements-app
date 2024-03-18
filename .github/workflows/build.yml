@@ -15,7 +15,11 @@ permissions:
 jobs:
   build:
     name: build
-    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: checkout
