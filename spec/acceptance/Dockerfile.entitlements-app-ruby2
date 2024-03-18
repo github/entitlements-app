@@ -12,7 +12,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     ldap-utils
 
 # Install bundler
-RUN gem install bundler
+RUN gem install bundler -v 2.4.22
 
 # Bootstrap files and caching for speed
 COPY "vendor/cache/" "/data/entitlements-app/vendor/cache/"

@@ -1,14 +1,54 @@
-#!/bin/bash
+#! /usr/bin/env bash
 
-set -e
+# COLORS
+OFF='\033[0m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+
+set -e # Prevent any kind of script failures
+
+# if any of the following env vars are set, use them for the APP_ENV value
+if [ -n "$APP_ENV" ]; then
+  export APP_ENV="$APP_ENV"
+elif [ -n "$ENV" ]; then
+  export APP_ENV="$ENV"
+elif [ -n "$ENVIRONMENT" ]; then
+  export APP_ENV="$ENVIRONMENT"
+elif [ -n "$RAILS_ENV" ]; then
+  export APP_ENV="$RAILS_ENV"
+elif [ -n "$RACK_ENV" ]; then
+  export APP_ENV="$RACK_ENV"
+fi
+
+# set the working directory to the root of the project
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
-cd "$DIR"
 
-export PATH=/usr/share/rbenv/shims:$PATH
-export RBENV_VERSION="$(cat .ruby-version)"
-rm -rf "${DIR}/.bundle"
+# set the ruby version to the one specified in the .ruby-version file
+[ -z "$RBENV_VERSION" ] && export RBENV_VERSION=$(cat "$DIR/.ruby-version")
 
-# Using Deprecated Flags to avoid pulling from upstream
-bundle install --local
+# set the app environment to development if it's not set
+[ -z "$APP_ENV" ] && export APP_ENV="development"
 
-bundle binstubs rake rspec-core rubocop
+# set the path to include the rbenv shims if they exist
+[ -d "/usr/share/rbenv/shims" ] && export PATH=/usr/share/rbenv/shims:$PATH
+
+TRASHDIR=$(mktemp -d /tmp/bootstrap.XXXXXXXXXXXXXXXXX)
+cleanup() {
+  rm -rf "$TRASHDIR"
+  # Remove empty directory
+  rmdir "$DIR/vendor/cache" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+# Bootstrap gem dependencies.
+if [ "$APP_ENV" == "production" ]; then
+  echo -e "💎 ${BLUE}Installing Gems for ${GREEN}production${BLUE}...${OFF}"
+  BUNDLE_WITHOUT=development bundle install --local
+  BUNDLE_WITHOUT=development bundle binstubs --all
+else
+  echo -e "💎 ${BLUE}Installing Gems for ${PURPLE}development${BLUE}...${OFF}"
+  bundle install --local
+  bundle binstubs --all
+fi

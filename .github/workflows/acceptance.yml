@@ -6,18 +6,19 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   # Detects changes to any of the source files for entitlements-app
   changes:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
 
     outputs:
       has_change: ${{ steps.diff.outputs.has_change}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - id: fetch-base
         if: github.event_name == 'pull_request'
@@ -56,9 +57,7 @@ jobs:
     name: runner / acceptance-tests
     strategy:
       matrix:
-        ruby: [ '2.7.5', '3.1.2' ]
-    permissions:
-      contents: read
+        ruby: [ '2.7.5', '3.1.2', '3.2.2', '3.3.0' ]
 
     steps:
       - uses: ruby/setup-ruby@250fcd6a742febb1123a77a841497ccaa8b9e939 # pin@v1.152.0
@@ -74,7 +73,7 @@ jobs:
 
       - name: checkout
         if: ${{ needs.changes.outputs.has_change == 'true' }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Use Docker layer caching for 'docker build' and 'docker-compose build' commands.
       # https://github.com/satackey/action-docker-layer-caching/releases/tag/v0.0.11

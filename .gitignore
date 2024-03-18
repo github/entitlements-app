@@ -17,3 +17,5 @@ coverage/*
 
 # Ignore JetBrains IDEs
 .idea
+
+tmp/

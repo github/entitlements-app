@@ -6,19 +6,20 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   rubocop:
     name: runner / rubocop
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ruby: [ '2.7.5', '3.1.2' ]
-    permissions:
-      contents: read
+        ruby: [ '2.7.5', '3.1.2', '3.2.2', '3.3.0' ]
 
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - uses: ruby/setup-ruby@250fcd6a742febb1123a77a841497ccaa8b9e939 # pin@v1.152.0
         with:
