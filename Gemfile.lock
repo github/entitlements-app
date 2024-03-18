@@ -118,7 +118,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  debug (> 1.0.0)
+  debug (<= 1.8.0)
   entitlements-app!
   rake (= 13.0.6)
   rspec (= 3.8.0)
