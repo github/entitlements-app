@@ -17,7 +17,7 @@ jobs:
       has_change: ${{ steps.diff.outputs.has_change}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - id: fetch-base
         if: github.event_name == 'pull_request'
@@ -74,7 +74,7 @@ jobs:
 
       - name: checkout
         if: ${{ needs.changes.outputs.has_change == 'true' }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Use Docker layer caching for 'docker build' and 'docker-compose build' commands.
       # https://github.com/satackey/action-docker-layer-caching/releases/tag/v0.0.11
