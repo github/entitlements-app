@@ -6,12 +6,13 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   # Detects changes to any of the source files for entitlements-app
   changes:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
 
     outputs:
       has_change: ${{ steps.diff.outputs.has_change}}
@@ -57,8 +58,6 @@ jobs:
     strategy:
       matrix:
         ruby: [ '2.7.5', '3.1.2', '3.2.2', '3.3.0' ]
-    permissions:
-      contents: read
 
     steps:
       - uses: ruby/setup-ruby@250fcd6a742febb1123a77a841497ccaa8b9e939 # pin@v1.152.0
