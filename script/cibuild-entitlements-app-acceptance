@@ -30,7 +30,7 @@ end_fold() {
 }
 
 docker_compose() {
-  cd "$DIR" && docker-compose -f "$DIR/spec/acceptance/docker-compose.yml" "$@"
+  cd "$DIR" && docker compose -f "$DIR/spec/acceptance/docker-compose.yml" "$@"
 }
 
 unset DOCKER_COMPOSE_NEEDS_SHUTDOWN
