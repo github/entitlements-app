@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    entitlements-app (0.3.1)
+    entitlements-app (0.3.2)
       concurrent-ruby (= 1.1.9)
       faraday (~> 2.0)
       net-ldap (~> 0.17)
@@ -56,7 +56,8 @@ GEM
     regexp_parser (2.8.1)
     reline (0.3.8)
       io-console (~> 0.5)
-    rexml (3.2.6)
+    rexml (3.2.8)
+      strscan (>= 3.0.9)
     rspec (3.8.0)
       rspec-core (~> 3.8.0)
       rspec-expectations (~> 3.8.0)
@@ -105,6 +106,7 @@ GEM
     simplecov-erb (1.0.1)
       simplecov (< 1.0)
     simplecov-html (0.10.2)
+    strscan (3.1.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     unicode-display_width (2.4.2)
