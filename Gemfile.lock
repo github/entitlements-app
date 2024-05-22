@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    entitlements-app (0.3.2)
+    entitlements-app (0.3.3)
       concurrent-ruby (= 1.1.9)
       faraday (~> 2.0)
       net-ldap (~> 0.17)
