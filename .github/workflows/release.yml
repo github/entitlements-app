@@ -11,6 +11,8 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -39,6 +41,10 @@ jobs:
         # builds the gem and saves the version to GITHUB_ENV
       - name: build
         run: echo "GEM_VERSION=$(gem build ${{ env.GEM_NAME }}.gemspec 2>&1 | grep Version | cut -d':' -f 2 | tr -d " \t\n\r")" >> $GITHUB_ENV
+      
+      - uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: "${{ env.GEM_NAME }}-${{ env.GEM_VERSION }}.gem"
 
       - name: publish to GitHub packages
         run: |
