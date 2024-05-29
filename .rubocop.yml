@@ -5,7 +5,7 @@ inherit_gem:
 AllCops:
   SuggestExtensions: false
   DisplayCopNames: true
-  TargetRubyVersion: 3.3.0
+  TargetRubyVersion: 3.3.1
   Exclude:
     - 'bin/*'
     - 'vendor/**/*'

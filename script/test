@@ -1,6 +1,12 @@
-#!/bin/bash
+#! /usr/bin/env bash
 
 # run script/test -h for help
+
+# COLORS
+OFF='\033[0m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
 
 set -e
 
@@ -8,8 +14,9 @@ function usage()
 {
     echo -e "\t ================== script/test usage =================="
     echo -e "\t-h --help               : displays help message"
+    echo -e "\t-k --no-linter          : disables linting tests"
     echo -e "\t-d --disable-bootstrap  : disables bootstrap"
-    echo -e "\n\t Suggested flags for development: script/test -d"
+    echo -e "\n\t Suggested flags for development: script/test -d -s"
 }
 
 while [ "$1" != "" ]; do
@@ -35,42 +42,64 @@ while [ "$1" != "" ]; do
     shift
 done
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
-
-export PATH=/usr/share/rbenv/shims:$PATH
-export RBENV_VERSION="$(cat "${DIR}/.ruby-version")"
-
-TRASHDIR=$(mktemp -d /tmp/cibuild.XXXXXXXXXXXXXXXXXX)
-cleanup() {
-  rm -rf "$TRASHDIR"
-}
-trap cleanup EXIT
-
-cd "$DIR"
-. "${DIR}/script/lib/fold.sh"
+# setup
+export DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
+[ -z "$RBENV_VERSION" ] && export RBENV_VERSION=$(cat "$DIR/.ruby-version")
 
 if [[ -z $no_bootstrap ]]; then
   # bootstrap
-  begin_fold "Bootstrapping"
-  ./script/bootstrap
-  end_fold
+  echo -e "\n🥾 ${BLUE}Bootstrapping: $(date "+%H:%M:%S")${OFF}\n"
+  echo "%%%FOLD {bootstrap}%%%"
+  cd "$DIR"
+  script/bootstrap
+  echo "%%%END FOLD%%%"
 else
-  echo -e "\nBypass Bootstrap"
+  echo -e "\n⏩ ${BLUE}Skipping Bootstrap${OFF}"
 fi
 
-bundle exec rspec spec/unit && rspec_exit=$? || rspec_exit=$?
+# Run Rubocop
+if [[ -z $no_linter ]]; then
+  echo -e "\n🤖 ${BLUE}Running Rubocop: $(date "+%H:%M:%S")${OFF}\n"
+  bundle exec rubocop -c .rubocop.yml lib/ spec/
+else
+  echo -e "\n⏩ ${BLUE}Skipping Rubocop${OFF}"
+fi
 
-cat "$DIR/coverage/coverage.txt"
-grep -q "You're all set, friend" "$DIR/coverage/coverage.txt" && cov_exit=0 || cov_exit=1
+# run tests
+echo -e "\n🧪 ${BLUE}Running tests: $(date "+%H:%M:%S")${OFF}\n"
+cd "$(dirname $0)/.."
+
+bundle exec bin/rspec spec/unit && rspec_exit=$? || rspec_exit=$?
+
+total_coverage=$(cat "$DIR/coverage/total-coverage.txt")
+
+if grep -q "100.0" "$DIR/coverage/total-coverage.txt"; then
+  cov_exit=0
+  echo -e "\n✅ Total Coverage: ${GREEN}$total_coverage${OFF}"
+else
+  cov_exit=1
+  echo -e "\n❌ Total Coverage: ${RED}$total_coverage${OFF}"
+fi
 
 echo ""
 echo "---------------------------------------"
-echo "Summary Results"
+echo "📊 Summary Results"
 echo "---------------------------------------"
 echo ""
-echo "rspec:       exitcode=${rspec_exit}"
-echo "coverage:    exitcode=${cov_exit}"
+
+if [[ $rspec_exit == 0 ]]; then
+  echo -e "✅ ${GREEN}rspec:    exitcode=${rspec_exit}${OFF}"
+else
+  echo -e "❌ ${RED}rspec:    exitcode=${rspec_exit}${OFF}"
+fi
+
+if [[ $cov_exit == 0 ]]; then
+  echo -e "✅ \033[0;32mcoverage: exitcode=${cov_exit}\033[0m"
+else
+  echo -e "❌ \033[0;31mcoverage: exitcode=${cov_exit}\033[0m"
+fi
 
 [ $rspec_exit -gt 0 ] && exit 1
 [ $cov_exit -gt 0 ] && exit 1
+
 exit 0
