@@ -21,16 +21,26 @@ require "tempfile"
 require "vcr"
 require "webmock/rspec"
 
+COV_DIR = File.expand_path("../../coverage", File.dirname(__FILE__))
+
+SimpleCov.root File.expand_path("..", File.dirname(__FILE__))
+SimpleCov.coverage_dir COV_DIR
+
 SimpleCov.formatters = [
   SimpleCov::Formatter::HTMLFormatter,
   SimpleCov::Formatter::ERBFormatter
 ]
-SimpleCov.start do
-  # don't show specs as missing coverage for themselves
-  add_filter "/spec/"
 
-  # don't analyze coverage for gems
-  add_filter "/vendor/gems/"
+SimpleCov.minimum_coverage 100
+
+SimpleCov.at_exit do
+  File.write("#{COV_DIR}/total-coverage.txt", SimpleCov.result.covered_percent)
+  SimpleCov.result.format!
+end
+
+SimpleCov.start do
+  add_filter "spec/"
+  add_filter "vendor/gems/"
 end
 
 require_relative "../../lib/entitlements"
