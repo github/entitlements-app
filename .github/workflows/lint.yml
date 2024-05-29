@@ -26,4 +26,7 @@ jobs:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
 
+      - name: bootstrap
+        run: script/bootstrap
+
       - run: bundle exec rubocop -c .rubocop.yml lib/ spec/
