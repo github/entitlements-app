@@ -60,7 +60,7 @@ fi
 # Run Rubocop
 if [[ -z $no_linter ]]; then
   echo -e "\n🤖 ${BLUE}Running Rubocop: $(date "+%H:%M:%S")${OFF}\n"
-  bundle exec bin/rubocop
+  bundle exec rubocop -c .rubocop.yml lib/ spec/
 else
   echo -e "\n⏩ ${BLUE}Skipping Rubocop${OFF}"
 fi
