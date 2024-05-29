@@ -23,7 +23,7 @@ require "webmock/rspec"
 
 COV_DIR = File.expand_path("../../coverage", File.dirname(__FILE__))
 
-SimpleCov.root File.expand_path("..", File.dirname(__FILE__))
+SimpleCov.root File.expand_path("../../", File.dirname(__FILE__))
 SimpleCov.coverage_dir COV_DIR
 
 SimpleCov.formatters = [
