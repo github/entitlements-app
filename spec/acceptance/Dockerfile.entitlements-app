@@ -1,4 +1,4 @@
-FROM ruby:3.1-slim
+FROM ruby:3.3.1-slim
 LABEL maintainer="GitHub Security Ops <opensource+entitlements-app@github.com>"
 ENV HOME /root
 ENV RELEASE=buster
