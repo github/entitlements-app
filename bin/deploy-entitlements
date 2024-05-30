@@ -6,6 +6,7 @@ require "ruby_version_check"
 
 # Note that contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
 if RubyVersionCheck.ruby_version2?
+  puts "WARNING: Ruby 2.x is deprecated and will be removed in a future release. Please upgrade to Ruby 3.x."
   $LOAD_PATH.unshift(File.expand_path(File.join(__dir__, "../lib/contracts-ruby2/lib")))
 else
   $LOAD_PATH.unshift(File.expand_path(File.join(__dir__, "../lib/contracts-ruby3/lib")))
