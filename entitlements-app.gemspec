@@ -23,7 +23,7 @@ Gem::Specification.new do |s|
   s.add_dependency "optimist", "= 3.0.0"
 
   s.add_development_dependency "debug", "<= 1.8.0"
-  s.add_development_dependency "rake", "= 13.0.6"
+  s.add_development_dependency "rake", "~> 13.2", ">= 13.2.1"
   s.add_development_dependency "rspec", "= 3.8.0"
   s.add_development_dependency "rspec-core", "= 3.8.0"
   s.add_development_dependency "rubocop", "~> 1.64"
