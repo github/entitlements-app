@@ -16,16 +16,15 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = ">= 3.0.0"
 
-  s.add_dependency "concurrent-ruby", "= 1.3.1"
+  s.add_dependency "concurrent-ruby", "~> 1.3", ">= 1.3.1"
   s.add_dependency "faraday", "~> 2.0"
   s.add_dependency "net-ldap", "~> 0.19"
   s.add_dependency "octokit", "~> 4.18"
-  s.add_dependency "optimist", "= 3.0.0"
+  s.add_dependency "optimist", "~> 3.1"
 
   s.add_development_dependency "debug", "<= 1.8.0"
   s.add_development_dependency "rake", "~> 13.2", ">= 13.2.1"
   s.add_development_dependency "rspec", "= 3.8.0"
-  s.add_development_dependency "rspec-core", "= 3.8.0"
   s.add_development_dependency "rubocop", "~> 1.64"
   s.add_development_dependency "rubocop-github", "~> 0.20"
   s.add_development_dependency "rubocop-performance", "~> 1.21"
