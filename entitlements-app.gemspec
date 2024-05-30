@@ -29,8 +29,8 @@ Gem::Specification.new do |s|
   s.add_development_dependency "rubocop-github", "~> 0.20"
   s.add_development_dependency "rubocop-performance", "~> 1.21"
   s.add_development_dependency "rugged", "~> 1.7", ">= 1.7.2"
-  s.add_development_dependency "simplecov", "= 0.16.1"
-  s.add_development_dependency "simplecov-erb", "= 1.0.1"
-  s.add_development_dependency "vcr", "= 4.0.0"
-  s.add_development_dependency "webmock", "3.4.2"
+  s.add_development_dependency "simplecov", "~> 0.22.0"
+  s.add_development_dependency "simplecov-erb", "~> 1.0", ">= 1.0.1"
+  s.add_development_dependency "vcr", "~> 6.2"
+  s.add_development_dependency "webmock", "~> 3.23", ">= 3.23.1"
 end

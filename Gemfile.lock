@@ -120,24 +120,25 @@ GEM
     sawyer (0.9.2)
       addressable (>= 2.3.5)
       faraday (>= 0.17.3, < 3)
-    simplecov (0.16.1)
+    simplecov (0.22.0)
       docile (~> 1.1)
-      json (>= 1.8, < 3)
-      simplecov-html (~> 0.10.0)
+      simplecov-html (~> 0.11)
+      simplecov_json_formatter (~> 0.1)
     simplecov-erb (1.0.1)
       simplecov (< 1.0)
-    simplecov-html (0.10.2)
+    simplecov-html (0.12.3)
+    simplecov_json_formatter (0.1.4)
     stringio (3.1.0)
     strscan (3.1.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     unicode-display_width (2.5.0)
     uri (0.13.0)
-    vcr (4.0.0)
-    webmock (3.4.2)
-      addressable (>= 2.3.6)
+    vcr (6.2.0)
+    webmock (3.23.1)
+      addressable (>= 2.8.0)
       crack (>= 0.3.2)
-      hashdiff
+      hashdiff (>= 0.4.0, < 2.0.0)
 
 PLATFORMS
   ruby
@@ -152,10 +153,10 @@ DEPENDENCIES
   rubocop-github (~> 0.20)
   rubocop-performance (~> 1.21)
   rugged (~> 1.7, >= 1.7.2)
-  simplecov (= 0.16.1)
-  simplecov-erb (= 1.0.1)
-  vcr (= 4.0.0)
-  webmock (= 3.4.2)
+  simplecov (~> 0.22.0)
+  simplecov-erb (~> 1.0, >= 1.0.1)
+  vcr (~> 6.2)
+  webmock (~> 3.23, >= 3.23.1)
 
 BUNDLED WITH
    2.5.9
