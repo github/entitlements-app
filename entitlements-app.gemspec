@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
   s.required_ruby_version = ">= 3.0.0"
 
   s.add_dependency "concurrent-ruby", "= 1.1.9"
-  s.add_dependency "faraday", "> 2.0", "<= 2.7.10"
+  s.add_dependency "faraday", "~> 2.0"
   s.add_dependency "net-ldap", "~> 0.19"
   s.add_dependency "octokit", "~> 4.18"
   s.add_dependency "optimist", "= 3.0.0"
