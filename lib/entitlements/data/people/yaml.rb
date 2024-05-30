@@ -80,7 +80,7 @@ module Entitlements
 
             # :nocov:
             raw_person_data = if RubyVersionCheck.ruby_version2?
-              ::YAML.load(File.read(filename)).to_h
+                                ::YAML.load(File.read(filename)).to_h
             else
               ::YAML.load(File.read(filename), permitted_classes: [Date]).to_h
             end

@@ -1,4 +1,4 @@
-FROM ruby:3.1-slim
+FROM ruby:3.3.1-slim
 LABEL maintainer="GitHub Security Ops <opensource+entitlements-app@github.com>"
 ENV HOME /root
 ENV RELEASE=buster
@@ -17,7 +17,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     pkg-config
 
 # Install bundler
-RUN gem install bundler -v 2.4.22
+RUN gem install bundler -v 2.5.9
 
 # Bootstrap files and caching for speed
 COPY "vendor/cache/" "/data/entitlements-app/vendor/cache/"

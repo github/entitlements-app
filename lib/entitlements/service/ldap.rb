@@ -383,7 +383,7 @@ module Entitlements
       Contract Net::LDAP::Entry => C::ArrayOf[String]
       def self.member_array(entry)
         members = if entry[:objectclass].include?("groupOfUniqueNames")
-          entry[:uniquemember]
+                    entry[:uniquemember]
         elsif entry[:objectclass].include?("groupOfNames")
           entry[:member]
         elsif entry[:objectclass].include?("posixGroup")
