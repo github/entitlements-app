@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = ">= 3.0.0"
 
-  s.add_dependency "concurrent-ruby", "= 1.1.9"
+  s.add_dependency "concurrent-ruby", "= 1.3.1"
   s.add_dependency "faraday", "~> 2.0"
   s.add_dependency "net-ldap", "~> 0.19"
   s.add_dependency "octokit", "~> 4.18"
@@ -26,9 +26,9 @@ Gem::Specification.new do |s|
   s.add_development_dependency "rake", "= 13.0.6"
   s.add_development_dependency "rspec", "= 3.8.0"
   s.add_development_dependency "rspec-core", "= 3.8.0"
-  s.add_development_dependency "rubocop", "= 1.29.1"
-  s.add_development_dependency "rubocop-github", "= 0.17.0"
-  s.add_development_dependency "rubocop-performance", "= 1.13.3"
+  s.add_development_dependency "rubocop", "~> 1.64"
+  s.add_development_dependency "rubocop-github", "~> 0.20"
+  s.add_development_dependency "rubocop-performance", "~> 1.21"
   s.add_development_dependency "rugged", "~> 1.7", ">= 1.7.2"
   s.add_development_dependency "simplecov", "= 0.16.1"
   s.add_development_dependency "simplecov-erb", "= 1.0.1"

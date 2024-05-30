@@ -81,7 +81,7 @@ module Entitlements
 
         dir = Entitlements.config["groups"][group]["dir"]
         result_dir = if dir.nil?
-          File.join(Entitlements.config_path, group)
+                       File.join(Entitlements.config_path, group)
         elsif dir.start_with?("/")
           dir
         else

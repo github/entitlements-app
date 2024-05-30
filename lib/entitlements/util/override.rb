@@ -26,7 +26,7 @@ module Entitlements
         end
 
         file = if plugin["file"] !~ %r{/}
-          File.expand_path(File.join("../plugins", plugin["file"]), File.dirname(__FILE__))
+                 File.expand_path(File.join("../plugins", plugin["file"]), File.dirname(__FILE__))
         elsif plugin["file"].start_with?("/")
           plugin["file"]
         else

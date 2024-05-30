@@ -275,7 +275,7 @@ module Entitlements
                 raw_key, operator, val = Regexp.last_match(1), Regexp.last_match(2), Regexp.last_match(3)
 
                 key = if filter_keywords.include?(raw_key)
-                  "filter_#{raw_key}"
+                        "filter_#{raw_key}"
                 elsif MODIFIERS.include?(raw_key)
                   "modifier_#{raw_key}"
                 else

@@ -27,7 +27,7 @@ module Entitlements
               entry = ldap.read(value)
               unless entry
                 message = if filename
-                  "Failed to read ldap_group = #{value} (referenced in #{filename})"
+                            "Failed to read ldap_group = #{value} (referenced in #{filename})"
                 else
                   # :nocov:
                   "Failed to read ldap_group = #{value}"
