@@ -75,7 +75,7 @@ GEM
     regexp_parser (2.9.2)
     reline (0.5.8)
       io-console (~> 0.5)
-    rexml (3.3.5)
+    rexml (3.3.6)
       strscan
     rspec (3.8.0)
       rspec-core (~> 3.8.0)
