@@ -21,6 +21,8 @@ Gem::Specification.new do |s|
   s.add_dependency "net-ldap", "~> 0.19"
   s.add_dependency "octokit", "~> 4.18"
   s.add_dependency "optimist", "~> 3.1"
+  s.add_dependency "ostruct", "~> 0.6.0"
+  s.add_dependency "logger", "~> 1.6"
 
   s.add_development_dependency "debug", "<= 1.8.0"
   s.add_development_dependency "rake", "~> 13.2", ">= 13.2.1"
