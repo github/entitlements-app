@@ -1,4 +1,4 @@
-# frozen_string_literal: true
+https://github.com/github/entitlements-app.git# frozen_string_literal: true
 
 module RubyVersionCheck
   # Allows maintaining version compatibility with older versions of Ruby
