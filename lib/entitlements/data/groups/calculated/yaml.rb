@@ -38,12 +38,12 @@ module Entitlements
           #
           # Takes no arguments.
           #
-          # Returns a String with the schema version (semver), or "v1.0.0" if undefined.
+          # Returns a String with the schema version (semver), or "1.0.0" if undefined.
           Contract C::None => String
           def schema_version
-            version = parsed_data.fetch("schema_version", "v1.0.0")
-            unless version.match?(/^\Av?\d+\.\d+\.\d+\z$/)
-              raise "Invalid schema version format: #{version} - Expected format is 'MAJOR.MINOR.PATCH' - Examples: v1.2.3 or 1.2.3"
+            version = parsed_data.fetch("schema_version", "1.0.0")
+            unless version.match?(/\A\d+\.\d+\.\d+\z/)
+              raise "Invalid schema version format: #{version} - Expected format is 'MAJOR.MINOR.PATCH' - Examples: 1.2.3 or 10.0.0"
             end
             version
           end

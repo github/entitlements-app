@@ -1,5 +1,5 @@
 description: Yo kittens
-schema_version: v1.abc2.3
+schema_version: 1.abc2.3
 rules:
   or:
     - username: russianblue
