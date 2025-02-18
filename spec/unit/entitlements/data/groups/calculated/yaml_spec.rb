@@ -35,6 +35,32 @@ describe Entitlements::Data::Groups::Calculated::YAML do
     end
   end
 
+  describe "#schema_version" do
+    it "returns the version string when one is set" do
+      filename = fixture("ldap-config/filters/no-filters-with-schema-version.yaml")
+      subject = described_class.new(filename: filename)
+      expect(subject.schema_version).to eq("v1.2.3")
+    end
+
+    it "returns the version string when one is set (no v prefix)" do
+      filename = fixture("ldap-config/filters/no-filters-with-schema-version-no-v.yaml")
+      subject = described_class.new(filename: filename)
+      expect(subject.schema_version).to eq("1.2.3")
+    end
+
+    it "returns the default version when schema_version is undefined" do
+      filename = fixture("ldap-config/filters/no-filters-description.yaml")
+      subject = described_class.new(filename: filename)
+      expect(subject.schema_version).to eq("v1.0.0")
+    end
+
+    it "throws an error when an invalid semver string is provided" do
+      filename = fixture("ldap-config/filters/no-filters-with-bad-schema-version.yaml")
+      subject = described_class.new(filename: filename)
+      expect { subject.schema_version }.to raise_error(RuntimeError, /Invalid schema version format/)
+    end
+  end
+
   describe "#initialize_filters" do
     it "returns the default filter hash when no filters are defined" do
       filename = fixture("ldap-config/filters/no-filters.yaml")

@@ -34,6 +34,20 @@ module Entitlements
             parsed_data.fetch("description", "")
           end
 
+          # Standard interface: Get the schema version of this group.
+          #
+          # Takes no arguments.
+          #
+          # Returns a String with the schema version (semver), or "v1.0.0" if undefined.
+          Contract C::None => String
+          def schema_version
+            version = parsed_data.fetch("schema_version", "v1.0.0")
+            unless version.match?(/^\Av?\d+\.\d+\.\d+\z$/)
+              raise "Invalid schema version format: #{version} - Expected format is 'MAJOR.MINOR.PATCH' - Examples: v1.2.3 or 1.2.3"
+            end
+            version
+          end
+
           # Files can support modifiers that act independently of rules.
           # This returns the modifiers from the file as a hash.
           #
