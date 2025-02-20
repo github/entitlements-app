@@ -34,6 +34,28 @@ module Entitlements
             parsed_data.fetch("description", "")
           end
 
+          # Standard interface: Get the schema version of this group.
+          #
+          # Takes no arguments.
+          # Examples: "entitlements/v1", "entitlements/v1.2.3", "entitlements/1.2.3"
+          # Format: namespace/major.minor.patch
+          #
+          # Returns a String with the schema version (k8s-style), or "entitlements/v1" if undefined.
+          Contract C::None => String
+          def schema_version
+            schema_version = parsed_data.fetch("schema_version", "entitlements/v1").to_s
+
+            namespace, version = schema_version.split("/")
+
+            unless namespace.match?(/\A[a-zA-Z0-9]+\z/) && version.match?(/\A(v?\d+(\.\d+){0,2})\z/)
+              raise "Invalid schema version format: #{schema_version} - Expected format is '<namespace>/<version>' " \
+                    "- Examples: entitlements/v1, entitlements/v1.2.3, entitlements/1.2.3"
+            end
+
+            # rebuild the schema version string to ensure it's in the correct format and return it
+            return "#{namespace}/#{version}"
+          end
+
           # Files can support modifiers that act independently of rules.
           # This returns the modifiers from the file as a hash.
           #

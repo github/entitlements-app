@@ -35,6 +35,57 @@ describe Entitlements::Data::Groups::Calculated::YAML do
     end
   end
 
+  describe "#schema_version" do
+    it "returns the version string when one is set" do
+      filename = fixture("ldap-config/filters/no-filters-with-schema-version.yaml")
+      subject = described_class.new(filename: filename)
+      expect(subject.schema_version).to eq("entitlements/1.2.3")
+    end
+
+    it "returns the version string when one is set without the patch" do
+      filename = fixture("ldap-config/filters/no-filters-with-schema-version-no-patch.yaml")
+      subject = described_class.new(filename: filename)
+      expect(subject.schema_version).to eq("entitlements/1.2")
+    end
+
+    it "returns the version string when one is set with just the major version" do
+      filename = fixture("ldap-config/filters/no-filters-with-schema-version-major.yaml")
+      subject = described_class.new(filename: filename)
+      expect(subject.schema_version).to eq("entitlements/1")
+    end
+
+    it "returns the version string when one is set with just the major version (with v prefix)" do
+      filename = fixture("ldap-config/filters/no-filters-with-schema-version-major-with-v.yaml")
+      subject = described_class.new(filename: filename)
+      expect(subject.schema_version).to eq("entitlements/v1")
+    end
+
+
+    it "returns the version string when one is set (with v prefix)" do
+      filename = fixture("ldap-config/filters/no-filters-with-schema-version-with-v.yaml")
+      subject = described_class.new(filename: filename)
+      expect(subject.schema_version).to eq("entitlements/v1.2.3")
+    end
+
+    it "returns the default version when schema_version is undefined" do
+      filename = fixture("ldap-config/filters/no-filters-description.yaml")
+      subject = described_class.new(filename: filename)
+      expect(subject.schema_version).to eq("entitlements/v1")
+    end
+
+    it "throws an error when an invalid schema_version string is provided" do
+      filename = fixture("ldap-config/filters/no-filters-with-bad-schema-version.yaml")
+      subject = described_class.new(filename: filename)
+      expect { subject.schema_version }.to raise_error(RuntimeError, /Invalid schema version format/)
+    end
+
+    it "throws an error when the version string is missing the namespace" do
+      filename = fixture("ldap-config/filters/no-filters-with-missing-version-namespace.yaml")
+      subject = described_class.new(filename: filename)
+      expect { subject.schema_version }.to raise_error(RuntimeError, /Invalid schema version format/)
+    end
+  end
+
   describe "#initialize_filters" do
     it "returns the default filter hash when no filters are defined" do
       filename = fixture("ldap-config/filters/no-filters.yaml")
