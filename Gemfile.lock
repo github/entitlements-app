@@ -33,6 +33,7 @@ GEM
     crack (1.0.0)
       bigdecimal
       rexml
+    date (3.4.1)
     debug (1.8.0)
       irb (>= 1.5.0)
       reline (>= 0.3.1)
@@ -67,7 +68,8 @@ GEM
     parser (3.3.1.0)
       ast (~> 2.4.1)
       racc
-    psych (5.1.2)
+    psych (5.2.3)
+      date
       stringio
     public_suffix (5.0.5)
     racc (1.8.0)
@@ -131,7 +133,7 @@ GEM
       simplecov (< 1.0)
     simplecov-html (0.12.3)
     simplecov_json_formatter (0.1.4)
-    stringio (3.1.0)
+    stringio (3.1.4)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     unicode-display_width (2.5.0)
