@@ -48,6 +48,19 @@ describe Entitlements::Data::Groups::Calculated::YAML do
       expect(subject.schema_version).to eq("entitlements/1.2")
     end
 
+    it "returns the version string when one is set with just the major version" do
+      filename = fixture("ldap-config/filters/no-filters-with-schema-version-major.yaml")
+      subject = described_class.new(filename: filename)
+      expect(subject.schema_version).to eq("entitlements/1")
+    end
+
+    it "returns the version string when one is set with just the major version (with v prefix)" do
+      filename = fixture("ldap-config/filters/no-filters-with-schema-version-major-with-v.yaml")
+      subject = described_class.new(filename: filename)
+      expect(subject.schema_version).to eq("entitlements/v1")
+    end
+
+
     it "returns the version string when one is set (with v prefix)" do
       filename = fixture("ldap-config/filters/no-filters-with-schema-version-with-v.yaml")
       subject = described_class.new(filename: filename)
