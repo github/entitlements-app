@@ -42,6 +42,12 @@ describe Entitlements::Data::Groups::Calculated::YAML do
       expect(subject.schema_version).to eq("1.2.3")
     end
 
+    it "returns the version string when one is set without the patch - not valid semver 2" do
+      filename = fixture("ldap-config/filters/no-filters-with-schema-version-no-patch.yaml")
+      subject = described_class.new(filename: filename)
+      expect { subject.schema_version }.to raise_error(RuntimeError, /Invalid schema version format/)
+    end
+
     it "returns the version string when one is set (with v prefix - not valid semver 2)" do
       filename = fixture("ldap-config/filters/no-filters-with-schema-version-with-v.yaml")
       subject = described_class.new(filename: filename)

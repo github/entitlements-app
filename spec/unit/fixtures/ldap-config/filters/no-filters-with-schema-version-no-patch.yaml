@@ -1,0 +1,6 @@
+description: Yo kittens
+schema_version: 1.2
+rules:
+  or:
+    - username: russianblue
+    - username: BlackManx
