@@ -294,7 +294,7 @@ module Entitlements
                 result[key]["&="] ||= []
 
                 # Semicolon predicates
-                if key == "description"
+                if key == "description" || key.start_with?("metadata_")
                   result[key][operator] << { key: val }
                 else
                   result[key][operator] << parsed_predicate(val)

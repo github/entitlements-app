@@ -183,10 +183,11 @@ describe Entitlements::Data::Groups::Calculated::Text do
       expect(subject.metadata).to eq("kittens" => "awesome", "puppies" => "young dogs")
     end
 
-    it "raises an error if expiration is given to metadata" do
-      filename = fixture("ldap-config/metadata/expiration.txt")
-      message = "In #{filename}, the key metadata_kittens cannot have additional setting(s) \"expiration\"!"
-      expect { described_class.new(filename: filename) }.to raise_error(message)
+    it "does not raise an error when metadata values contain semicolons" do
+      filename = fixture("ldap-config/metadata/semicolon.txt")
+      expect { described_class.new(filename: filename) }.not_to raise_error
+      subject = described_class.new(filename: filename)
+      expect(subject.metadata).to eq("kittens" => "awesome", "justification" => "Need access; for project work")
     end
   end
 
