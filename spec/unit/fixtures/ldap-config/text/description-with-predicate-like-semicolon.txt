@@ -1,0 +1,2 @@
+description = This group provides access to resources; expiration = 2099-12-31 is not a predicate here
+username = mainecoon

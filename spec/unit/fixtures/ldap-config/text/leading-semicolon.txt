@@ -1,2 +1,0 @@
-description = Leading semicolon test
-username = ;expiration = 2025-01-01

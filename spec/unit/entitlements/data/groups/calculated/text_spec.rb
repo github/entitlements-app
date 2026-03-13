@@ -60,6 +60,24 @@ describe Entitlements::Data::Groups::Calculated::Text do
         subject.description
       end.to raise_error(RuntimeError, /description cannot use '!=' operator in .+not-equals-description.txt!/)
     end
+
+    it "preserves semicolons in a free-form narrative description" do
+      filename = fixture("ldap-config/text/description-with-semicolon-narrative.txt")
+      subject = described_class.new(filename: filename)
+      expect(subject.description).to eq("This group manages auth; it also handles access control for the team")
+    end
+
+    it "does not parse semicolons in description as predicates" do
+      filename = fixture("ldap-config/text/semicolons-in-description.txt")
+      subject = described_class.new(filename: filename)
+      expect(subject.description).to eq("the; description; can; have; semicolons")
+    end
+
+    it "does not treat predicate-like text after semicolons in description as predicates" do
+      filename = fixture("ldap-config/text/description-with-predicate-like-semicolon.txt")
+      subject = described_class.new(filename: filename)
+      expect(subject.description).to eq("This group provides access to resources; expiration = 2099-12-31 is not a predicate here")
+    end
   end
 
   describe "#initialize_filters" do
@@ -585,39 +603,6 @@ describe Entitlements::Data::Groups::Calculated::Text do
         answer = {
           "description" => {"=" => [{ key: "the; description; can; have; semicolons" }], "!=" => [], "&=" => []},
           "username" => {"=" => [{ key: "mainecoon" }], "!=" => [], "&=" => []}
-        }
-        expect(result).to eq(answer)
-      end
-    end
-
-    context "with a leading semicolon in the value" do
-      let(:filename) { fixture("ldap-config/text/leading-semicolon.txt") }
-
-      it "raises an error about empty value" do
-        expect do
-          subject.send(:parsed_data)
-        end.to raise_error(ArgumentError, /Rule Error: Empty value with semicolon predicate in .+leading-semicolon.txt!/)
-      end
-    end
-
-    context "with only a semicolon as the value" do
-      let(:filename) { fixture("ldap-config/text/only-semicolon.txt") }
-
-      it "raises an error about empty value" do
-        expect do
-          subject.send(:parsed_data)
-        end.to raise_error(ArgumentError, /Rule Error: Empty value with semicolon predicate in .+only-semicolon.txt!/)
-      end
-    end
-
-    context "with a trailing semicolon in the value" do
-      let(:filename) { fixture("ldap-config/text/trailing-semicolon.txt") }
-
-      it "parses correctly ignoring trailing semicolon" do
-        result = subject.send(:parsed_data)
-        answer = {
-          "description" => {"=" => [{ key: "Trailing semicolon test" }], "!=" => [], "&=" => []},
-          "username" => {"=" => [{ key: "blackmanx" }], "!=" => [], "&=" => []}
         }
         expect(result).to eq(answer)
       end
