@@ -1,0 +1,2 @@
+description = Only semicolon test
+username = ;

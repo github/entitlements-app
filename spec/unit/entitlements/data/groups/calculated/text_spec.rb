@@ -589,5 +589,38 @@ describe Entitlements::Data::Groups::Calculated::Text do
         expect(result).to eq(answer)
       end
     end
+
+    context "with a leading semicolon in the value" do
+      let(:filename) { fixture("ldap-config/text/leading-semicolon.txt") }
+
+      it "raises an error about empty value" do
+        expect do
+          subject.send(:parsed_data)
+        end.to raise_error(ArgumentError, /Rule Error: Empty value with semicolon predicate in .+leading-semicolon.txt!/)
+      end
+    end
+
+    context "with only a semicolon as the value" do
+      let(:filename) { fixture("ldap-config/text/only-semicolon.txt") }
+
+      it "raises an error about empty value" do
+        expect do
+          subject.send(:parsed_data)
+        end.to raise_error(ArgumentError, /Rule Error: Empty value with semicolon predicate in .+only-semicolon.txt!/)
+      end
+    end
+
+    context "with a trailing semicolon in the value" do
+      let(:filename) { fixture("ldap-config/text/trailing-semicolon.txt") }
+
+      it "parses correctly ignoring trailing semicolon" do
+        result = subject.send(:parsed_data)
+        answer = {
+          "description" => {"=" => [{ key: "Trailing semicolon test" }], "!=" => [], "&=" => []},
+          "username" => {"=" => [{ key: "blackmanx" }], "!=" => [], "&=" => []}
+        }
+        expect(result).to eq(answer)
+      end
+    end
   end
 end

@@ -1,0 +1,2 @@
+description = Trailing semicolon test
+username = blackmanx;

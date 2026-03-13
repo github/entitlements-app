@@ -316,8 +316,13 @@ module Entitlements
             return { key: v } unless v.include?(";")
 
             parts = v.split(/\s*;\s*/)
-            op_hash = { key: parts.shift }
-            parts.each do |part|
+            primary_value = parts.shift
+            if primary_value.nil? || primary_value.strip.empty?
+              raise ArgumentError, "Rule Error: Empty value with semicolon predicate in #{filename}!"
+            end
+
+            op_hash = { key: primary_value.strip }
+            parts.reject { |part| part.strip.empty? }.each do |part|
               if part =~ /\A(\w+)\s*=\s*(\S+)\s*\z/
                 predicate_keyword, predicate_value = Regexp.last_match(1), Regexp.last_match(2)
                 unless SEMICOLON_PREDICATES.include?(predicate_keyword)
