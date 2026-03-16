@@ -203,6 +203,12 @@ describe Entitlements::Data::Groups::Calculated::Text do
       subject = described_class.new(filename: filename)
       expect(subject.modifiers).to eq("expiration"=>"2043-01-01")
     end
+
+    it "raises an error if a modifier has additional settings" do
+      filename = fixture("ldap-config/expiration/additional-settings.txt")
+      message = "In #{filename}, the key modifier_expiration cannot have additional setting(s) \"expiration\"!"
+      expect { described_class.new(filename: filename).modifiers }.to raise_error(message)
+    end
   end
 
   describe "#rules" do
