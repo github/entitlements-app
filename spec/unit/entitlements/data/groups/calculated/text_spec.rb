@@ -60,6 +60,24 @@ describe Entitlements::Data::Groups::Calculated::Text do
         subject.description
       end.to raise_error(RuntimeError, /description cannot use '!=' operator in .+not-equals-description.txt!/)
     end
+
+    it "preserves semicolons in a free-form narrative description" do
+      filename = fixture("ldap-config/text/description-with-semicolon-narrative.txt")
+      subject = described_class.new(filename: filename)
+      expect(subject.description).to eq("This group manages auth; it also handles access control for the team")
+    end
+
+    it "does not parse semicolons in description as predicates" do
+      filename = fixture("ldap-config/text/semicolons-in-description.txt")
+      subject = described_class.new(filename: filename)
+      expect(subject.description).to eq("the; description; can; have; semicolons")
+    end
+
+    it "does not treat predicate-like text after semicolons in description as predicates" do
+      filename = fixture("ldap-config/text/description-with-predicate-like-semicolon.txt")
+      subject = described_class.new(filename: filename)
+      expect(subject.description).to eq("This group provides access to resources; expiration = 2099-12-31 is not a predicate here")
+    end
   end
 
   describe "#initialize_filters" do
