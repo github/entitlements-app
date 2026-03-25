@@ -1,0 +1,2 @@
+description = This group manages auth; it also handles access control for the team
+username = mainecoon
