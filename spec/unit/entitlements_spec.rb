@@ -171,8 +171,78 @@ describe Entitlements do
     end
   end
 
+  describe "#timed_operation" do
+    let(:log_output) { StringIO.new }
+    let(:timing_logger) { Logger.new(log_output) }
+
+    before do
+      described_class.set_logger(timing_logger)
+    end
+
+    it "logs a successful operation with provider details" do
+      allow(Process).to receive(:clock_gettime)
+        .with(Process::CLOCK_MONOTONIC)
+        .and_return(10.0, 12.3456789)
+
+      result = described_class.timed_operation(
+        phase: "apply",
+        provider: "aad",
+        target: "apps/azure_aad"
+      ) { :result }
+
+      expect(result).to eq(:result)
+      metric = JSON.parse(log_output.string.sub(/\A.*METRIC /, ""))
+      expect(metric).to eq(
+        "metric" => "entitlements.operation.duration_seconds",
+        "value" => 2.345679,
+        "phase" => "apply",
+        "status" => "success",
+        "provider" => "aad",
+        "target" => "apps/azure_aad"
+      )
+    end
+
+    it "logs failed operations before propagating the exception" do
+      allow(Process).to receive(:clock_gettime)
+        .with(Process::CLOCK_MONOTONIC)
+        .and_return(20.0, 20.25)
+
+      expect do
+        described_class.timed_operation(phase: "audit_setup") { raise "Boom" }
+      end.to raise_error(RuntimeError, "Boom")
+
+      metric = JSON.parse(log_output.string.sub(/\A.*METRIC /, ""))
+      expect(metric).to eq(
+        "metric" => "entitlements.operation.duration_seconds",
+        "value" => 0.25,
+        "phase" => "audit_setup",
+        "status" => "error"
+      )
+    end
+
+    it "does not allow metric failures to change operation behavior" do
+      allow(Process).to receive(:clock_gettime)
+        .with(Process::CLOCK_MONOTONIC)
+        .and_return(30.0, 30.5)
+      allow(timing_logger).to receive(:info).and_raise(IOError, "logger unavailable")
+      expect(described_class).to receive(:warn).with("Failed to log timing metric: IOError: logger unavailable")
+
+      expect(described_class.timed_operation(phase: "apply") { :result }).to eq(:result)
+    end
+  end
+
   describe "#calculate" do
     let(:cache) { { people_obj: people_ldap } }
+    let(:entitlements_config_hash) do
+      {
+        "extras" => {},
+        "filters" => {},
+        "groups" => {
+          "ldap-dir" => { "type" => "ldap" },
+          "other-ldap-dir" => { "type" => "ldap" }
+        }
+      }
+    end
     let(:action1) { instance_double(Entitlements::Models::Action) }
     let(:action2) { instance_double(Entitlements::Models::Action) }
     let(:actions) { [action1, action2] }
@@ -208,8 +278,8 @@ describe Entitlements do
     let(:cache) { { people_obj: people_ldap } }
     let(:people_ldap) { instance_double(Entitlements::Data::People::LDAP) }
 
-    let(:auditor1) { instance_double(Entitlements::Auditor::Base) }
-    let(:auditor2) { instance_double(Entitlements::Auditor::Base) }
+    let(:auditor1) { instance_double(Entitlements::Auditor::Base, provider_id: "auditor1") }
+    let(:auditor2) { instance_double(Entitlements::Auditor::Base, provider_id: "auditor2") }
 
     let(:action1) { instance_double(Entitlements::Models::Action) }
     let(:action2) { instance_double(Entitlements::Models::Action) }
