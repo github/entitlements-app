@@ -20,6 +20,7 @@ require "erb"
 require "json"
 require "logger"
 require "ostruct"
+require "securerandom"
 require "stringio"
 require "uri"
 require "yaml"
@@ -90,6 +91,7 @@ module Entitlements
     @config_file = nil
     @config_path_override = nil
     @person_extra_methods = {}
+    @run_id = nil
 
     reset_extras!
     Entitlements::Data::Groups::Calculated.reset!
@@ -355,7 +357,11 @@ module Entitlements
   end
   # :nocov:
 
-  def self.timed_operation(phase:, provider: nil, target: nil)
+  def self.run_id
+    @run_id ||= ENV["ENTITLEMENTS_RUN_ID"] || SecureRandom.uuid
+  end
+
+  def self.timed_operation(phase:, provider: nil, target: nil, span: "leaf", concurrent: false, count: nil)
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     status = "error"
     result = yield
@@ -367,10 +373,14 @@ module Entitlements
       metric: "entitlements.operation.duration_seconds",
       value: duration.round(6),
       phase: phase,
-      status: status
+      status: status,
+      run_id: run_id,
+      span: span,
+      concurrent: concurrent
     }
     fields[:provider] = provider if provider
     fields[:target] = target if target
+    fields[:count] = count if count
     begin
       logger.info("METRIC #{JSON.generate(fields)}")
     rescue StandardError => e
@@ -387,6 +397,10 @@ module Entitlements
   # Returns the array of actions.
   Contract C::None => C::ArrayOf[Entitlements::Models::Action]
   def self.calculate
+    timed_operation(phase: "calculate_total", span: "parent") { calculate_actions }
+  end
+
+  def self.calculate_actions
     # Load extras that are configured.
     if Entitlements.config.key?("extras")
       timed_operation(phase: "load_extras") { Entitlements.load_extras }
@@ -414,8 +428,8 @@ module Entitlements
         group_start = Time.now
         logger.debug("Begin prefetch and validate for #{group_name}")
         provider = Entitlements.config["groups"].fetch(group_name).fetch("type")
-        timed_operation(phase: "prefetch", provider:, target: group_name) { obj.prefetch }
-        timed_operation(phase: "validate", provider:, target: group_name) { obj.validate }
+        timed_operation(phase: "prefetch", provider: provider, target: group_name, concurrent: true) { obj.prefetch }
+        timed_operation(phase: "validate", provider: provider, target: group_name, concurrent: true) { obj.validate }
         logger.debug("Finished prefetch and validate for #{group_name} in #{Time.now - group_start}")
       end
     end
@@ -428,7 +442,7 @@ module Entitlements
     actions = []
     Entitlements.child_classes.map do |group_name, obj|
       provider = Entitlements.config["groups"].fetch(group_name).fetch("type")
-      timed_operation(phase: "calculate", provider:, target: group_name) { obj.calculate }
+      timed_operation(phase: "calculate", provider: provider, target: group_name) { obj.calculate }
       if obj.change_count > 0
         logger.debug "Group #{group_name.inspect} contributes #{obj.change_count} change(s)."
         cache[:change_count] += obj.change_count
@@ -452,6 +466,10 @@ module Entitlements
     actions: C::ArrayOf[Entitlements::Models::Action]
   ] => nil
   def self.execute(actions:)
+    timed_operation(phase: "execute_total", span: "parent") { execute_actions(actions: actions) }
+  end
+
+  def self.execute_actions(actions:)
     # Set up auditors.
     Entitlements.auditors.each do |auditor|
       timed_operation(phase: "audit_setup", provider: auditor.provider_id) { auditor.setup }
@@ -467,14 +485,14 @@ module Entitlements
       # Pre-apply changes for each class.
       Entitlements.child_classes.each do |group_name, obj|
         provider = Entitlements.config["groups"].fetch(group_name).fetch("type")
-        timed_operation(phase: "preapply", provider:, target: group_name) { obj.preapply }
+        timed_operation(phase: "preapply", provider: provider, target: group_name) { obj.preapply }
       end
 
       # Apply changes from all actions.
       actions.each do |action|
         obj = Entitlements.child_classes.fetch(action.ou)
         provider = Entitlements.config["groups"].fetch(action.ou).fetch("type")
-        timed_operation(phase: "apply", provider:, target: action.ou) do
+        timed_operation(phase: "apply", provider: provider, target: action.ou, count: 1) do
           obj.apply(action)
         end
         successful_actions.add(action.dn)

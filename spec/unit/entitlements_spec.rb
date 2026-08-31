@@ -177,6 +177,7 @@ describe Entitlements do
 
     before do
       described_class.set_logger(timing_logger)
+      allow(described_class).to receive(:run_id).and_return("run-123")
     end
 
     it "logs a successful operation with provider details" do
@@ -197,6 +198,9 @@ describe Entitlements do
         "value" => 2.345679,
         "phase" => "apply",
         "status" => "success",
+        "run_id" => "run-123",
+        "span" => "leaf",
+        "concurrent" => false,
         "provider" => "aad",
         "target" => "apps/azure_aad"
       )
@@ -216,7 +220,10 @@ describe Entitlements do
         "metric" => "entitlements.operation.duration_seconds",
         "value" => 0.25,
         "phase" => "audit_setup",
-        "status" => "error"
+        "status" => "error",
+        "run_id" => "run-123",
+        "span" => "leaf",
+        "concurrent" => false
       )
     end
 
