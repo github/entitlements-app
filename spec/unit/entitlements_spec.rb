@@ -171,70 +171,88 @@ describe Entitlements do
     end
   end
 
-  describe "#timed_operation" do
-    let(:log_output) { StringIO.new }
-    let(:timing_logger) { Logger.new(log_output) }
+  describe "#build_statsd" do
+    it "builds a DogStatsD client using the IAM defaults" do
+      allow(ENV).to receive(:fetch).and_call_original
+      allow(ENV).to receive(:fetch).with("DOGSTATSD_HOST", "localhost").and_return("dogstatsd.example.com")
+      allow(ENV).to receive(:fetch).with("DOGSTATSD_PORT", 28_125).and_return("28125")
+      allow(ENV).to receive(:fetch).with("KUBE_POD_NAME", "not-on-kubernetes").and_return("entitlements-123")
+      allow(ENV).to receive(:fetch).with("APP_ENV", "development").and_return("production")
+      allow(Resolv).to receive(:getaddress).with("dogstatsd.example.com").and_return("192.0.2.1")
 
-    before do
-      described_class.set_logger(timing_logger)
-      allow(described_class).to receive(:run_id).and_return("run-123")
+      expect(Datadog::Statsd).to receive(:new).with(
+        "192.0.2.1",
+        28_125,
+        tags: [
+          "application:entitlements",
+          "kube_pod_name:entitlements-123",
+          "app_env:production"
+        ]
+      ).and_return(statsd)
+
+      expect(described_class.build_statsd).to eq(statsd)
     end
+  end
 
-    it "logs a successful operation with provider details" do
-      allow(Process).to receive(:clock_gettime)
-        .with(Process::CLOCK_MONOTONIC)
-        .and_return(10.0, 12.3456789)
+  describe "#close_statsd" do
+    it "closes and clears the configured client" do
+      expect(statsd).to receive(:close).once
+
+      described_class.close_statsd
+      described_class.close_statsd
+    end
+  end
+
+  describe "#timed_operation" do
+    it "measures a successful operation with provider details" do
+      tags = nil
+      expect(statsd).to receive(:time) do |metric, options, &block|
+        expect(metric).to eq("entitlements.operation.duration")
+        tags = options.fetch(:tags)
+        block.call
+      end
 
       result = described_class.timed_operation(
         phase: "apply",
         provider: "aad",
-        target: "apps/azure_aad"
+        target: "apps/azure_aad",
+        count: 1
       ) { :result }
 
       expect(result).to eq(:result)
-      metric = JSON.parse(log_output.string.sub(/\A.*METRIC /, ""))
-      expect(metric).to eq(
-        "metric" => "entitlements.operation.duration_seconds",
-        "value" => 2.345679,
-        "phase" => "apply",
-        "status" => "success",
-        "run_id" => "run-123",
-        "span" => "leaf",
-        "concurrent" => false,
-        "provider" => "aad",
-        "target" => "apps/azure_aad"
+      expect(tags).to eq(
+        [
+          "phase:apply",
+          "status:success",
+          "span:leaf",
+          "concurrent:false",
+          "provider:aad",
+          "target:apps/azure_aad",
+          "count:1"
+        ]
       )
     end
 
-    it "logs failed operations before propagating the exception" do
-      allow(Process).to receive(:clock_gettime)
-        .with(Process::CLOCK_MONOTONIC)
-        .and_return(20.0, 20.25)
+    it "measures failed operations before propagating the exception" do
+      tags = nil
+      expect(statsd).to receive(:time) do |metric, options, &block|
+        expect(metric).to eq("entitlements.operation.duration")
+        tags = options.fetch(:tags)
+        block.call
+      end
 
       expect do
         described_class.timed_operation(phase: "audit_setup") { raise "Boom" }
       end.to raise_error(RuntimeError, "Boom")
 
-      metric = JSON.parse(log_output.string.sub(/\A.*METRIC /, ""))
-      expect(metric).to eq(
-        "metric" => "entitlements.operation.duration_seconds",
-        "value" => 0.25,
-        "phase" => "audit_setup",
-        "status" => "error",
-        "run_id" => "run-123",
-        "span" => "leaf",
-        "concurrent" => false
+      expect(tags).to eq(
+        [
+          "phase:audit_setup",
+          "status:error",
+          "span:leaf",
+          "concurrent:false"
+        ]
       )
-    end
-
-    it "does not allow metric failures to change operation behavior" do
-      allow(Process).to receive(:clock_gettime)
-        .with(Process::CLOCK_MONOTONIC)
-        .and_return(30.0, 30.5)
-      allow(timing_logger).to receive(:info).and_raise(IOError, "logger unavailable")
-      expect(described_class).to receive(:warn).with("Failed to log timing metric: IOError: logger unavailable")
-
-      expect(described_class.timed_operation(phase: "apply") { :result }).to eq(:result)
     end
   end
 

@@ -16,11 +16,11 @@ end
 # :nocov:
 
 require "contracts"
+require "datadog/statsd"
 require "erb"
-require "json"
 require "logger"
 require "ostruct"
-require "securerandom"
+require "resolv"
 require "stringio"
 require "uri"
 require "yaml"
@@ -91,7 +91,7 @@ module Entitlements
     @config_file = nil
     @config_path_override = nil
     @person_extra_methods = {}
-    @run_id = nil
+    @statsd = nil
 
     reset_extras!
     Entitlements::Data::Groups::Calculated.reset!
@@ -357,34 +357,45 @@ module Entitlements
   end
   # :nocov:
 
-  def self.run_id
-    @run_id ||= ENV["ENTITLEMENTS_RUN_ID"] || SecureRandom.uuid
+  def self.statsd
+    @statsd ||= build_statsd
+  end
+
+  def self.set_statsd(statsd)
+    @statsd = statsd
+  end
+
+  def self.close_statsd
+    @statsd&.close
+    @statsd = nil
+  end
+
+  def self.build_statsd
+    host = Resolv.getaddress(ENV.fetch("DOGSTATSD_HOST", "localhost"))
+    port = Integer(ENV.fetch("DOGSTATSD_PORT", 28_125))
+    tags = [
+      "application:entitlements",
+      "kube_pod_name:#{ENV.fetch('KUBE_POD_NAME', 'not-on-kubernetes')}",
+      "app_env:#{ENV.fetch('APP_ENV', 'development')}"
+    ]
+    Datadog::Statsd.new(host, port, tags: tags)
   end
 
   def self.timed_operation(phase:, provider: nil, target: nil, span: "leaf", concurrent: false, count: nil)
-    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    status = "error"
-    result = yield
-    status = "success"
-    result
-  ensure
-    duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
-    fields = {
-      metric: "entitlements.operation.duration_seconds",
-      value: duration.round(6),
-      phase: phase,
-      status: status,
-      run_id: run_id,
-      span: span,
-      concurrent: concurrent
-    }
-    fields[:provider] = provider if provider
-    fields[:target] = target if target
-    fields[:count] = count if count
-    begin
-      logger.info("METRIC #{JSON.generate(fields)}")
-    rescue StandardError => e
-      warn "Failed to log timing metric: #{e.class}: #{e.message}"
+    tags = [
+      "phase:#{phase}",
+      "status:error",
+      "span:#{span}",
+      "concurrent:#{concurrent}"
+    ]
+    tags << "provider:#{provider}" if provider
+    tags << "target:#{target}" if target
+    tags << "count:#{count}" if count
+
+    statsd.time("entitlements.operation.duration", tags: tags) do
+      result = yield
+      tags[1] = "status:success"
+      result
     end
   end
 
