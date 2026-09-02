@@ -346,7 +346,7 @@ module Entitlements
           # Returns C::SetOf[Entitlements::Models::Person] from a recursive call.
           def handle_and(rule)
             ensure_type!("and", rule, Array)
-            return result unless rule.any?
+            return Set.new unless rule.any?
 
             first_rule = rule.shift
             ensure_type!("and", first_rule, Hash)
