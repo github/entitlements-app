@@ -4,6 +4,7 @@
 # Load third party dependencies first.
 require "concurrent"
 require "ruby_version_check"
+require "time"
 
 # contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
 
@@ -88,10 +89,42 @@ module Entitlements
     @config = nil
     @config_file = nil
     @config_path_override = nil
+    @evaluation_time = nil
     @person_extra_methods = {}
 
     reset_extras!
+    reset_rule_classes!
     Entitlements::Data::Groups::Calculated.reset!
+  end
+
+  # Remove classes loaded from Ruby entitlement files so separate evaluations cannot
+  # retain class-level descriptions, filters, metadata, or methods.
+  #
+  # Takes no arguments.
+  def self.reset_rule_classes!
+    return unless const_defined?(:Rule, false)
+
+    Entitlements::Rule.constants(false).each do |constant|
+      Entitlements::Rule.send(:remove_const, constant) unless constant == :Base
+    end
+  end
+
+  # Return the time used for date-sensitive entitlement evaluation.
+  #
+  # Returns a Time.
+  Contract C::None => Time
+  def self.evaluation_time
+    @evaluation_time || Time.now
+  end
+
+  # Set the time used for date-sensitive entitlement evaluation.
+  #
+  # value - A Time.
+  #
+  # Returns the supplied Time.
+  Contract Time => Time
+  def self.evaluation_time=(value)
+    @evaluation_time = value
   end
 
   def self.reset_extras!
@@ -600,6 +633,7 @@ require_relative "entitlements/backend/member_of"
 require_relative "entitlements/cli"
 require_relative "entitlements/data/groups"
 require_relative "entitlements/data/people"
+require_relative "entitlements/desired_groups"
 require_relative "entitlements/extras"
 require_relative "entitlements/extras/base"
 require_relative "entitlements/models/action"
@@ -611,6 +645,7 @@ require_relative "entitlements/plugins/group_of_names"
 require_relative "entitlements/plugins/posix_group"
 require_relative "entitlements/rule/base"
 require_relative "entitlements/service/ldap"
+require_relative "entitlements/smart_diff"
 require_relative "entitlements/util/mirror"
 require_relative "entitlements/util/override"
 require_relative "entitlements/util/util"
