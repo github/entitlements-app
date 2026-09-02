@@ -16,6 +16,8 @@ module Entitlements
         include ::Contracts::Core
         C = ::Contracts
 
+        class DynamicGroupError < RuntimeError; end
+
         FILE_EXTENSIONS = {
           "rb"   => "Entitlements::Data::Groups::Calculated::Ruby",
           "txt"  => "Entitlements::Data::Groups::Calculated::Text",
@@ -39,6 +41,7 @@ module Entitlements
           @groups_in_ou_cache = {}
           @groups_cache = {}
           @config_cache = {}
+          Entitlements::Data::Groups::Calculated::Rules::Group.reset!
         end
 
         # Construct a group object.
@@ -60,10 +63,11 @@ module Entitlements
         #
         # Returns a Set of Strings (DNs) of the groups in this OU.
         Contract String, C::HashOf[String => C::Any], C::KeywordArgs[
-          skip_broken_references: C::Optional[C::Bool]
+          skip_broken_references: C::Optional[C::Bool],
+          skip_dynamic_groups: C::Optional[C::Bool]
         ] => C::SetOf[String]
-        def self.read_all(ou_key, cfg_obj, skip_broken_references: false)
-          return read_mirror(ou_key, cfg_obj) if cfg_obj["mirror"]
+        def self.read_all(ou_key, cfg_obj, skip_broken_references: false, skip_dynamic_groups: false)
+          return read_mirror(ou_key, cfg_obj, skip_dynamic_groups: skip_dynamic_groups) if cfg_obj["mirror"]
 
           @config_cache[ou_key] ||= cfg_obj
           @groups_in_ou_cache[ou_key] ||= begin
@@ -94,15 +98,28 @@ module Entitlements
               group_dn = ["cn=#{file_without_extension}", cfg_obj.fetch("base")].join(",")
 
               # Use the ruleset to build the group.
-              options = { skip_broken_references: skip_broken_references }
+              options = {
+                skip_broken_references: skip_broken_references,
+                skip_dynamic_groups: skip_dynamic_groups
+              }
 
-              Entitlements.cache[:file_objects][filename] ||= ruleset(filename: filename, config: cfg_obj, options: options)
-              @groups_cache[group_dn] = Entitlements::Models::Group.new(
-                dn: group_dn,
-                members: Entitlements.cache[:file_objects][filename].modified_filtered_members,
-                description: Entitlements.cache[:file_objects][filename].description,
-                metadata: Entitlements.cache[:file_objects][filename].metadata.merge("_filename" => filename)
-              )
+              begin
+                Entitlements.cache[:file_objects][filename] ||= ruleset(filename: filename, config: cfg_obj, options: options)
+                @groups_cache[group_dn] = Entitlements::Models::Group.new(
+                  dn: group_dn,
+                  members: Entitlements.cache[:file_objects][filename].modified_filtered_members,
+                  description: Entitlements.cache[:file_objects][filename].description,
+                  metadata: Entitlements.cache[:file_objects][filename].metadata.merge("_filename" => filename)
+                )
+              rescue DynamicGroupError => e
+                raise unless skip_dynamic_groups
+
+                entitlement_group = "#{ou_key}/#{file_without_extension}"
+                Entitlements.cache[:dynamic_group_warnings] ||= {}
+                Entitlements.cache[:dynamic_group_warnings][entitlement_group] = e.message
+                Entitlements.logger.warn "Skipping #{entitlement_group}: #{e.message}"
+                next
+              end
               result.add group_dn
             end
 
@@ -152,8 +169,10 @@ module Entitlements
         # cfg_obj - Hash with the configuration for that key from the configuration file.
         #
         # Returns a Set of Strings (DNs) of the groups in this OU.
-        Contract String, C::HashOf[String => C::Any] => C::SetOf[String]
-        def self.read_mirror(ou_key, cfg_obj)
+        Contract String, C::HashOf[String => C::Any], C::KeywordArgs[
+          skip_dynamic_groups: C::Optional[C::Bool]
+        ] => C::SetOf[String]
+        def self.read_mirror(ou_key, cfg_obj, skip_dynamic_groups: false)
           @groups_in_ou_cache[ou_key] ||= begin
             Entitlements.logger.debug "Mirroring #{ou_key} from #{cfg_obj['mirror']}"
 
@@ -162,6 +181,15 @@ module Entitlements
             end
 
             result = Set.new
+            if skip_dynamic_groups
+              source_prefix = "#{cfg_obj['mirror']}/"
+              Entitlements.cache.fetch(:dynamic_group_warnings, {}).to_a.each do |entitlement_group, message|
+                next unless entitlement_group.start_with?(source_prefix)
+
+                mirror_group = "#{ou_key}/#{entitlement_group.delete_prefix(source_prefix)}"
+                Entitlements.cache[:dynamic_group_warnings][mirror_group] = message
+              end
+            end
             @groups_in_ou_cache[cfg_obj["mirror"]].each do |source_dn|
               source_group = @groups_cache[source_dn]
               unless source_group

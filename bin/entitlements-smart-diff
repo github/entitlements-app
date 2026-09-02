@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+
+require "entitlements"
+require "entitlements/smart_diff/cli"
+
+exit Entitlements::SmartDiff::Cli.run

@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 # Interact with rules that are stored as ruby code.
 
+require "ripper"
+
 module Entitlements
   class Data
     class Groups
@@ -101,7 +103,13 @@ module Entitlements
           Contract C::None => Object
           def rule_obj
             @rule_obj ||= begin
-              require filename
+              reasons = dynamic_reasons
+              if options[:skip_dynamic_groups] && reasons.any?
+                raise Entitlements::Data::Groups::Calculated::DynamicGroupError,
+                      "Dynamic group #{dynamic_group_identifier} uses #{reasons.join(' and ')}"
+              end
+
+              load filename
               clazz = Kernel.const_get(ruby_class_name)
               clazz.new
             end
@@ -129,6 +137,29 @@ module Entitlements
           Contract C::None => String
           def ruby_class_name
             ["Entitlements", "Rule", ou, cn].map { |x| camelize(x) }.join("::")
+          end
+
+          def dynamic_group_identifier
+            source_directory = File.expand_path(File.dirname(filename))
+            group_name = Entitlements.config.fetch("groups").filter_map do |name, config|
+              directory = config["dir"] || name
+              path = directory.start_with?("/") ? directory : File.expand_path(directory, Entitlements.config_path)
+              name if File.expand_path(path) == source_directory
+            end.min_by(&:length)
+            "#{group_name || rou}/#{cn}"
+          end
+
+          def dynamic_reasons
+            constants = Ripper.lex(File.read(filename)).filter_map do |_position, type, token, _state|
+              token if type == :on_const
+            end
+            reasons = ["arbitrary Ruby code"]
+            reasons << "environment variables" if constants.include?("ENV")
+            reasons << "network client" if (constants & %w[Octokit Faraday HTTP]).any?
+            if constants.include?("GitHub") && constants.include?("Service")
+              reasons << "live GitHub service"
+            end
+            reasons
           end
         end
       end

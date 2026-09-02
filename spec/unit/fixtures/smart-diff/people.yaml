@@ -1,0 +1,7 @@
+---
+Alice:
+  manager: Alice
+bob:
+  manager: Alice
+contractor:
+  manager: Alice

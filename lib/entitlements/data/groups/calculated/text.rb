@@ -182,7 +182,7 @@ module Entitlements
               if parsed_data.key?("modifier_expiration") && affirmative.empty?
                 exp_date = parsed_data.fetch("modifier_expiration").fetch("=").first.fetch(:key)
                 date = Entitlements::Util::Util.parse_date(exp_date)
-                return {"always" => false} if date <= Time.now.utc.to_date
+                return {"always" => false} if date <= Entitlements.evaluation_time.utc.to_date
               end
 
               # There has to be at least one affirmative condition, not just all negative ones.

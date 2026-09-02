@@ -217,7 +217,7 @@ module Entitlements
             return false if expiration.nil? || expiration.strip.empty?
             if expiration =~ /\A(\d{4})-(\d{2})-(\d{2})\z/
               year, month, day = Regexp.last_match(1).to_i, Regexp.last_match(2).to_i, Regexp.last_match(3).to_i
-              return Time.utc(year, month, day, 0, 0, 0) <= Time.now.utc
+              return Time.utc(year, month, day, 0, 0, 0) <= Entitlements.evaluation_time.utc
             end
             message = "Invalid expiration date #{expiration.inspect} in #{context} (expected format: YYYY-MM-DD)"
             raise ArgumentError, message
@@ -243,7 +243,13 @@ module Entitlements
             Entitlements.cache[:dependencies] << "#{rou}/#{cn}"
 
             # Actually calculate it.
-            Entitlements.cache[:calculated][rou][cn] = _members_from_rules(rule)
+            begin
+              Entitlements.cache[:calculated][rou][cn] = _members_from_rules(rule)
+            rescue Entitlements::Data::Groups::Calculated::DynamicGroupError
+              Entitlements.cache[:calculated][rou].delete(cn)
+              Entitlements.cache[:dependencies].delete("#{rou}/#{cn}")
+              raise
+            end
 
             # This should be the last item on the dependencies array, so pop it off.
             unless Entitlements.cache[:dependencies].last == "#{rou}/#{cn}"
