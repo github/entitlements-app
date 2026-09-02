@@ -154,12 +154,13 @@ module Entitlements
     private_class_method :snapshot_metadata
 
     def self.escape_table(value)
-      CGI.escapeHTML(value.to_s.gsub(/[\r\n]+/, " ")).gsub("|", "\\|")
+      escaped = value.to_s.gsub(/[\r\n]+/, " ").gsub("\\") { "\\\\" }
+      CGI.escapeHTML(escaped).gsub("|") { "\\|" }
     end
     private_class_method :escape_table
 
     def self.escape_inline(value)
-      value.to_s.gsub("`", "\\`").gsub(/[\r\n]+/, " ")
+      value.to_s.gsub(/[\r\n]+/, " ").gsub("\\") { "\\\\" }.gsub("`") { "\\`" }
     end
     private_class_method :escape_inline
 

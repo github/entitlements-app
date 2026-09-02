@@ -22,7 +22,7 @@ describe Entitlements::SmartDiff do
       "people_snapshot_sha256" => "people",
       "evaluated_at" => "2026-09-02T19:58:54Z",
       "memberships" => [
-        {"backend" => "dummy", "entitlement_group" => "teams/new|group", "username" => "<alice>"},
+        {"backend" => "dummy", "entitlement_group" => "teams/new\\|group", "username" => "<alice>"},
         {"backend" => "dummy", "entitlement_group" => "teams/same", "username" => "bob"}
       ]
     }
@@ -37,7 +37,7 @@ describe Entitlements::SmartDiff do
     expect(result["base"]).not_to have_key("memberships")
     expect(markdown).to include("1 membership added; 1 membership removed")
     expect(markdown).to include("&lt;alice&gt;")
-    expect(markdown).to include("teams/new\\|group")
+    expect(markdown).to include("teams/new\\\\\\|group")
     expect(markdown).to include(described_class::LIMITATION)
     expect(described_class.json(result)).to end_with("\n")
   end
