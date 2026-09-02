@@ -106,8 +106,20 @@ describe Entitlements::SmartDiff do
       head_tree: fixture("smart-diff")
     )
     expect(result["counts"]).to eq("gains" => 0, "losses" => 0)
+    expect(result["complete"]).to be true
+    expect(result["scope"]).to eq("affected_groups" => [])
     expect(result["base"]["people_snapshot_sha256"]).to eq(result["head"]["people_snapshot_sha256"])
     expect(result["base"]["evaluated_at"]).to eq(result["head"]["evaluated_at"])
+
+    unscoped, = described_class.run(
+      base_config: common[:config_file],
+      head_config: common[:config_file],
+      base_sha: "a" * 40,
+      head_sha: "b" * 40,
+      people_source: common[:people_source],
+      evaluated_at: common[:evaluated_at]
+    )
+    expect(unscoped).not_to have_key("scope")
   end
 
   it "rejects incomplete or inconsistent snapshots" do
