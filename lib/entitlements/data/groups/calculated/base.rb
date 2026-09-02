@@ -248,6 +248,7 @@ module Entitlements
             rescue Entitlements::Data::Groups::Calculated::DynamicGroupError
               Entitlements.cache[:calculated][rou].delete(cn)
               Entitlements.cache[:dependencies].delete("#{rou}/#{cn}")
+              Entitlements.cache.fetch(:file_objects, {}).delete(filename)
               raise
             end
 

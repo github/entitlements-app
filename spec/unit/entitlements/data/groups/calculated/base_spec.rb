@@ -167,6 +167,21 @@ describe Entitlements::Data::Groups::Calculated::Base do
       end
     end
 
+    context "when a dynamic dependency interrupts calculation" do
+      let(:file) { fixture("ldap-config/logic_tests/simple_and.yaml") }
+      let(:obj) { Entitlements::Data::Groups::Calculated::YAML.new(filename: file, config: config) }
+
+      it "removes the partially calculated file object" do
+        Entitlements.cache[:file_objects] = {file => obj}
+        allow(obj).to receive(:_members_from_rules)
+          .and_raise(Entitlements::Data::Groups::Calculated::DynamicGroupError, "dynamic")
+
+        expect { obj.send(:members_from_rules, {"always" => false}) }
+          .to raise_error(Entitlements::Data::Groups::Calculated::DynamicGroupError, "dynamic")
+        expect(Entitlements.cache[:file_objects]).not_to have_key(file)
+      end
+    end
+
     context "with a simple 'or' rule set" do
       let(:file) { fixture("ldap-config/logic_tests/simple_or.yaml") }
       let(:obj) { Entitlements::Data::Groups::Calculated::YAML.new(filename: file, config: config) }
