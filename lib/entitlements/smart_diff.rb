@@ -3,6 +3,7 @@
 require "cgi"
 require "json"
 require "set"
+require_relative "smart_diff/scope"
 
 module Entitlements
   class SmartDiff
@@ -12,6 +13,14 @@ module Entitlements
       "resource mappings, drift, invitations, JIT sessions, or API operations."
 
     def self.run(base_config:, head_config:, base_sha:, head_sha:, people_source:, evaluated_at:, base_tree: nil, head_tree: nil, markdown_limit: DEFAULT_MARKDOWN_LIMIT)
+      affected_groups = if base_tree && head_tree
+                          Entitlements::SmartDiff::Scope.affected_groups(
+                            base_config: base_config,
+                            head_config: head_config,
+                            base_tree: base_tree,
+                            head_tree: head_tree
+                          )
+                        end
       common = {people_source: people_source, evaluated_at: evaluated_at}
       base = Entitlements::DesiredGroups.export(
         config_file: base_config,
@@ -27,16 +36,20 @@ module Entitlements
         allow_incomplete: true,
         **common
       )
-      compare(base: base, head: head, markdown_limit: markdown_limit)
+      compare(base: base, head: head, markdown_limit: markdown_limit, affected_groups: affected_groups)
     end
 
-    def self.compare(base:, head:, markdown_limit: DEFAULT_MARKDOWN_LIMIT)
+    def self.compare(base:, head:, markdown_limit: DEFAULT_MARKDOWN_LIMIT, affected_groups: nil)
       validate_snapshot!(base, "base")
       validate_snapshot!(head, "head")
       raise ArgumentError, "Base and head used different people snapshots" unless base["people_snapshot_sha256"] == head["people_snapshot_sha256"]
       raise ArgumentError, "Base and head used different evaluation timestamps" unless base["evaluated_at"] == head["evaluated_at"]
       raise ArgumentError, "markdown_limit must be a positive integer" unless markdown_limit.is_a?(Integer) && markdown_limit.positive?
 
+      if affected_groups
+        base = scoped_snapshot(base, affected_groups)
+        head = scoped_snapshot(head, affected_groups)
+      end
       base_memberships = indexed_memberships(base)
       head_memberships = indexed_memberships(head)
       incomplete_groups = Set.new((snapshot_warnings(base) + snapshot_warnings(head)).map { |warning| warning.fetch("entitlement_group") })
@@ -55,6 +68,7 @@ module Entitlements
         "gains" => gains,
         "losses" => losses
       }
+      result["scope"] = {"affected_groups" => affected_groups} if affected_groups
       [result, markdown(result, limit: markdown_limit)]
     end
 
@@ -83,6 +97,9 @@ module Entitlements
         "Head: `#{escape_inline(result.fetch('head').fetch('source_sha'))}`",
         ""
       ])
+      if result["scope"]
+        lines.concat(["Affected entitlement groups: #{result.fetch('scope').fetch('affected_groups').length}", ""])
+      end
 
       remaining = limit
       [["Added", "gains"], ["Removed", "losses"]].each do |heading, key|
@@ -152,6 +169,19 @@ module Entitlements
       snapshot.slice("source_sha", "people_snapshot_sha256", "evaluated_at", "complete")
     end
     private_class_method :snapshot_metadata
+
+    def self.scoped_snapshot(snapshot, affected_groups)
+      included = affected_groups.to_set
+      warnings = snapshot_warnings(snapshot).select { |warning| included.include?(warning.fetch("entitlement_group")) }
+      snapshot.merge(
+        "complete" => warnings.empty?,
+        "warnings" => warnings,
+        "memberships" => snapshot.fetch("memberships").select do |record|
+          included.include?(record.fetch("entitlement_group"))
+        end
+      )
+    end
+    private_class_method :scoped_snapshot
 
     def self.escape_table(value)
       escaped = value.to_s.gsub(/[\r\n]+/, " ").gsub("\\") { "\\\\" }
