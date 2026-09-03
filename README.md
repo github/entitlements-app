@@ -1,25 +1,5 @@
 # entitlements-app
 
-## Smart diff for CI
-
-`entitlements-smart-diff` compares complete desired entitlement-group membership from two prepared source trees. It uses one explicit people snapshot and evaluation timestamp for both trees, does not read current provider state, and writes complete JSON plus bounded Markdown:
-
-```shell
-bundle exec entitlements-smart-diff \
-  --base-tree /work/base \
-  --head-tree /work/head \
-  --base-sha "$BASE_SHA" \
-  --head-sha "$HEAD_SHA" \
-  --people-snapshot /inputs/people.yaml \
-  --evaluated-at 2026-09-02T19:58:54Z \
-  --json /output/smart-diff.json \
-  --markdown /output/smart-diff.md
-```
-
-The default configuration path in each tree is `config/entitlements.yaml`; use `--base-config` and `--head-config` when repositories use another path. When the configuration uses plugin-defined backend types, preload the trusted plugin assembly with `RUBYOPT=-r/path/to/entitlements-and-plugins`. PR-controlled entitlement code must still run in a credential-free, network-isolated sandbox.-app
-
-Ruby entitlement groups are treated as dynamic by smart diff because arbitrary Ruby cannot be proven deterministic from frozen inputs. Groups that use or transitively depend on Ruby definitions are omitted from the membership comparison, and both JSON and Markdown report that the result is incomplete. Normal deployment behavior is unchanged.-app
-
 [![acceptance](https://github.com/github/entitlements-app/actions/workflows/acceptance.yml/badge.svg)](https://github.com/github/entitlements-app/actions/workflows/acceptance.yml) [![test](https://github.com/github/entitlements-app/actions/workflows/test.yml/badge.svg)](https://github.com/github/entitlements-app/actions/workflows/test.yml) [![lint](https://github.com/github/entitlements-app/actions/workflows/lint.yml/badge.svg)](https://github.com/github/entitlements-app/actions/workflows/lint.yml) [![build](https://github.com/github/entitlements-app/actions/workflows/build.yml/badge.svg)](https://github.com/github/entitlements-app/actions/workflows/build.yml) [![release](https://github.com/github/entitlements-app/actions/workflows/release.yml/badge.svg)](https://github.com/github/entitlements-app/actions/workflows/release.yml) [![codeql](https://github.com/github/entitlements-app/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/github/entitlements-app/actions/workflows/codeql-analysis.yml) [![coverage](https://img.shields.io/badge/coverage-100%25-success)](https://img.shields.io/badge/coverage-100%25-success) [![style](https://img.shields.io/badge/code%20style-rubocop--github-blue)](https://github.com/github/rubocop-github)
 
 `entitlements-app` is a Ruby gem which provides git-managed LDAP group configuration and access provisioning to your declared resources. It powers Entitlements, GitHub's internal Identity and Access Management (IAM) system. Entitlements is a pluggable system designed to alleviate IAM pain points.
