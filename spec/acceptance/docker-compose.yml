@@ -30,7 +30,7 @@ services:
       - "${DIR}/spec/acceptance/git-server/keys:/git-server/keys:ro"
   ldap-server:
     entrypoint: /acceptance/ldap-server/run-server.sh
-    image: osixia/openldap:1.2.2
+    image: osixia/openldap:1.2.5
     networks:
       ldap-network:
         aliases:
