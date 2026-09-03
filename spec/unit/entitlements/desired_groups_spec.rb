@@ -33,8 +33,8 @@ describe Entitlements::DesiredGroups do
     expect(first["source_sha"]).to eq(source_sha)
     expect(first["people_snapshot_sha256"]).to eq(Digest::SHA256.file(people_source).hexdigest)
     expect(first["evaluated_at"]).to eq(evaluated_at)
-    expect(first["complete"]).to be true
-    expect(first["warnings"]).to eq([])
+    expect(first).not_to have_key("complete")
+    expect(first).not_to have_key("warnings")
     expect(first["memberships"]).to eq(first["memberships"].sort_by(&:values))
     expect(first["memberships"].length).to eq(10)
     expect(first["memberships"]).to include(
@@ -81,43 +81,29 @@ describe Entitlements::DesiredGroups do
     expect { described_class.export(**args) }.to raise_error(ArgumentError, /stable backend identifier/)
   end
 
-  it "can skip dynamic groups and report an incomplete snapshot" do
+  it "can skip dynamic groups and their dependents without reporting them" do
     dynamic_args = args.merge(config_file: fixture("dynamic-groups/config.yaml"))
     expect { described_class.export(**dynamic_args) }
       .to raise_error(KeyError, /DYNAMIC_GROUP_TOKEN/)
 
-    result = described_class.export(**dynamic_args.merge(allow_incomplete: true))
-    expect(result["complete"]).to be false
-    expect(result["warnings"]).to eq([
-      {
-        "entitlement_group" => "teams/dynamic",
-        "message" => "Dynamic group teams/dynamic uses arbitrary Ruby code"
-      },
-      {
-        "entitlement_group" => "teams/dependent",
-        "message" => "Dynamic group teams/dynamic uses arbitrary Ruby code"
-      },
-      {
-        "entitlement_group" => "teams/static-ruby",
-        "message" => "Dynamic group teams/static-ruby uses arbitrary Ruby code"
-      },
-      {
-        "entitlement_group" => "teams_mirror/dynamic",
-        "message" => "Dynamic group teams/dynamic uses arbitrary Ruby code"
-      },
-      {
-        "entitlement_group" => "teams_mirror/dependent",
-        "message" => "Dynamic group teams/dynamic uses arbitrary Ruby code"
-      },
-      {
-        "entitlement_group" => "teams_mirror/static-ruby",
-        "message" => "Dynamic group teams/static-ruby uses arbitrary Ruby code"
-      }
-    ].sort_by { |warning| warning["entitlement_group"] })
+    result = described_class.export(**dynamic_args.merge(skip_dynamic_groups: true))
+    expect(result).not_to have_key("complete")
+    expect(result).not_to have_key("warnings")
     expect(result["memberships"]).to eq([
       {"backend" => "dummy", "entitlement_group" => "teams/static", "username" => "alice"},
       {"backend" => "dummy", "entitlement_group" => "teams_mirror/static", "username" => "alice"}
     ])
+  end
+
+  it "preserves rule constants that were not loaded from entitlement files" do
+    shared_rule = Class.new
+    Entitlements::Rule.const_set(:SharedRule, shared_rule)
+
+    described_class.export(**args)
+
+    expect(Entitlements::Rule.const_get(:SharedRule, false)).to equal(shared_rule)
+  ensure
+    Entitlements::Rule.send(:remove_const, :SharedRule) if Entitlements::Rule.const_defined?(:SharedRule, false)
   end
 
   it "does not leak Ruby rule class state between trees" do

@@ -111,13 +111,9 @@ module Entitlements
                   description: Entitlements.cache[:file_objects][filename].description,
                   metadata: Entitlements.cache[:file_objects][filename].metadata.merge("_filename" => filename)
                 )
-              rescue DynamicGroupError => e
+              rescue DynamicGroupError
                 raise unless skip_dynamic_groups
 
-                entitlement_group = "#{ou_key}/#{file_without_extension}"
-                Entitlements.cache[:dynamic_group_warnings] ||= {}
-                Entitlements.cache[:dynamic_group_warnings][entitlement_group] = e.message
-                Entitlements.logger.warn "Skipping #{entitlement_group}: #{e.message}"
                 next
               end
               result.add group_dn
@@ -181,15 +177,6 @@ module Entitlements
             end
 
             result = Set.new
-            if skip_dynamic_groups
-              source_prefix = "#{cfg_obj['mirror']}/"
-              Entitlements.cache.fetch(:dynamic_group_warnings, {}).to_a.each do |entitlement_group, message|
-                next unless entitlement_group.start_with?(source_prefix)
-
-                mirror_group = "#{ou_key}/#{entitlement_group.delete_prefix(source_prefix)}"
-                Entitlements.cache[:dynamic_group_warnings][mirror_group] = message
-              end
-            end
             @groups_in_ou_cache[cfg_obj["mirror"]].each do |source_dn|
               source_group = @groups_cache[source_dn]
               unless source_group

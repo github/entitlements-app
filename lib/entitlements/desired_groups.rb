@@ -7,7 +7,7 @@ module Entitlements
   class DesiredGroups
     SCHEMA_VERSION = 1
 
-    def self.export(config_file:, source_sha:, people_source:, evaluated_at:, tree_root: nil, allow_incomplete: false)
+    def self.export(config_file:, source_sha:, people_source:, evaluated_at:, tree_root: nil, skip_dynamic_groups: false)
       validate_inputs!(
         config_file: config_file,
         source_sha: source_sha,
@@ -31,17 +31,12 @@ module Entitlements
       Entitlements.cache[:desired_groups_export] = true
       Entitlements.register_filters if Entitlements.config.key?("filters")
 
-      memberships = export_memberships(backend_identifiers, allow_incomplete: allow_incomplete)
-      warnings = Entitlements.cache.fetch(:dynamic_group_warnings, {}).sort.map do |entitlement_group, message|
-        {"entitlement_group" => entitlement_group, "message" => message}
-      end
+      memberships = export_memberships(backend_identifiers, skip_dynamic_groups: skip_dynamic_groups)
       {
         "schema_version" => SCHEMA_VERSION,
         "source_sha" => source_sha.downcase,
         "people_snapshot_sha256" => people_hash,
         "evaluated_at" => evaluation_time.utc.iso8601,
-        "complete" => warnings.empty?,
-        "warnings" => warnings,
         "memberships" => memberships
       }
     ensure
@@ -95,13 +90,13 @@ module Entitlements
     end
     private_class_method :use_people_snapshot!
 
-    def self.export_memberships(backend_identifiers, allow_incomplete:)
+    def self.export_memberships(backend_identifiers, skip_dynamic_groups:)
       records = {}
       exportable_groups.each do |group_name, group_config|
         Entitlements::Data::Groups::Calculated.read_all(
           group_name,
           group_config,
-          skip_dynamic_groups: allow_incomplete
+          skip_dynamic_groups: skip_dynamic_groups
         ).each do |group_dn|
           group = Entitlements::Data::Groups::Calculated.read(group_dn)
           group.member_strings.each do |username|

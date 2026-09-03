@@ -106,7 +106,12 @@ module Entitlements
                       "Dynamic group #{rou}/#{cn} uses arbitrary Ruby code"
               end
 
-              load filename
+              constants_before_load = Entitlements.rule_constant_paths
+              begin
+                load filename
+              ensure
+                Entitlements.record_rule_constants(Entitlements.rule_constant_paths - constants_before_load)
+              end
               clazz = Kernel.const_get(ruby_class_name)
               clazz.new
             end

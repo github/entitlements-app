@@ -118,7 +118,7 @@ module Entitlements
               filters.reject { |_, filter_val| filter_val == :all }.each do |filter_name, filter_val|
                 filter_cfg = Entitlements::Data::Groups::Calculated.filters_index[filter_name]
                 clazz = filter_cfg.fetch(:class)
-                obj = clazz.new(filter: filter_val, config: filter_cfg.fetch(:config, {}))
+                obj = clazz.new(filter: filter_val, config: filter_cfg.fetch(:config, {}), options: options)
                 # If excluded_paths is set, ignore any of those excluded paths
                 unless filter_cfg[:config]["excluded_paths"].nil?
                   # if the filename is not in any of the excluded paths, filter it

@@ -27,14 +27,14 @@ module Entitlements
         config_file: base_config,
         source_sha: base_sha,
         tree_root: base_tree,
-        allow_incomplete: true,
+        skip_dynamic_groups: true,
         **common
       )
       head = Entitlements::DesiredGroups.export(
         config_file: head_config,
         source_sha: head_sha,
         tree_root: head_tree,
-        allow_incomplete: true,
+        skip_dynamic_groups: true,
         **common
       )
       compare(base: base, head: head, markdown_limit: markdown_limit, affected_groups: affected_groups)
@@ -53,18 +53,13 @@ module Entitlements
       end
       base_memberships = indexed_memberships(base)
       head_memberships = indexed_memberships(head)
-      incomplete_groups = Set.new((snapshot_warnings(base) + snapshot_warnings(head)).map { |warning| warning.fetch("entitlement_group") })
-      base_memberships.delete_if { |identity, _record| incomplete_groups.include?(identity[1]) }
-      head_memberships.delete_if { |identity, _record| incomplete_groups.include?(identity[1]) }
       gains = (head_memberships.keys - base_memberships.keys).sort.map { |identity| head_memberships.fetch(identity) }
       losses = (base_memberships.keys - head_memberships.keys).sort.map { |identity| base_memberships.fetch(identity) }
 
       result = {
         "schema_version" => SCHEMA_VERSION,
-        "complete" => snapshot_complete?(base) && snapshot_complete?(head),
         "base" => snapshot_metadata(base),
         "head" => snapshot_metadata(head),
-        "warnings" => {"base" => snapshot_warnings(base), "head" => snapshot_warnings(head)},
         "counts" => {"gains" => gains.length, "losses" => losses.length},
         "gains" => gains,
         "losses" => losses
@@ -80,16 +75,6 @@ module Entitlements
     def self.markdown(result, limit: DEFAULT_MARKDOWN_LIMIT)
       lines = [
         "## Proposed entitlement membership changes",
-      ]
-      unless result.fetch("complete")
-        warning_count = result.fetch("warnings").values.flatten.map { |warning| warning.fetch("entitlement_group") }.uniq.length
-        lines.concat([
-          "",
-          "> [!WARNING]",
-          "> This diff is incomplete. #{membership_count(warning_count).sub('membership', 'group')} skipped because calculation depends on dynamic inputs.",
-        ])
-      end
-      lines.concat([
         "",
         "**#{membership_count(result.fetch('counts').fetch('gains'))} added; " \
           "#{membership_count(result.fetch('counts').fetch('losses'))} removed.**",
@@ -97,51 +82,50 @@ module Entitlements
         "Base: `#{result.fetch('base').fetch('source_sha')}`  ",
         "Head: `#{result.fetch('head').fetch('source_sha')}`",
         ""
-      ])
+      ]
       if result["scope"]
         lines.concat(["Affected entitlement groups: #{result.fetch('scope').fetch('affected_groups').length}", ""])
       end
 
-      remaining = limit
-      [["Added", "gains"], ["Removed", "losses"]].each do |heading, key|
-        records = result.fetch(key)
-        lines.concat(["### #{heading}", ""])
-        if records.empty?
-          lines.concat(["None.", ""])
-          next
+      changes_by_backend = Hash.new { |hash, backend| hash[backend] = [] }
+      [["Added", "gains"], ["Removed", "losses"]].each do |change, key|
+        result.fetch(key).each do |record|
+          changes_by_backend[record.fetch("backend")] << [change, record]
         end
-
-        visible = records.first(remaining)
-        lines.concat(["| User | Backend | Entitlement group |", "|---|---|---|"])
-        visible.each do |record|
-          lines << "| #{escape_table(record.fetch('username'))} | #{escape_table(record.fetch('backend'))} | " \
-            "#{escape_table(record.fetch('entitlement_group'))} |"
-        end
-        lines << ""
-        remaining -= visible.length
-        omitted = records.length - visible.length
-        lines.concat(["_#{omitted} additional #{heading.downcase} memberships omitted; see the JSON artifact._", ""]) if omitted.positive?
       end
 
-      lines.concat(["> #{LIMITATION}", ""])
-      unless result.fetch("complete")
-        warnings = result.fetch("warnings").flat_map do |tree, entries|
-          entries.map { |warning| [tree, warning] }
-        end.sort_by { |tree, warning| [tree, warning.fetch("entitlement_group")] }
-        visible_warnings = warnings.first(remaining)
-        lines.concat(["### Incomplete groups", ""])
-        if visible_warnings.any?
-          lines.concat(["| Tree | Entitlement group | Reason |", "|---|---|---|"])
-          visible_warnings.each do |tree, warning|
-            lines << "| #{tree} | #{escape_table(warning.fetch('entitlement_group'))} | #{escape_table(warning.fetch('message'))} |"
+      if changes_by_backend.empty?
+        lines.concat(["No membership changes.", ""])
+      end
+
+      remaining = limit
+      changes_by_backend.sort.each do |backend, changes|
+        added_count = changes.count { |change, _record| change == "Added" }
+        removed_count = changes.length - added_count
+        lines.concat([
+          "<details>",
+          "<summary><strong>#{escape_html(backend)}</strong> - #{membership_count(added_count)} added; " \
+            "#{membership_count(removed_count)} removed</summary>",
+          ""
+        ])
+
+        visible = changes.first(remaining)
+        if visible.any?
+          lines.concat(["| Change | User | Entitlement group |", "|---|---|---|"])
+          visible.each do |change, record|
+            lines << "| #{change} | #{escape_table(record.fetch('username'))} | " \
+              "#{escape_table(record.fetch('entitlement_group'))} |"
           end
           lines << ""
         end
-        omitted = warnings.length - visible_warnings.length
-        if omitted.positive?
-          lines.concat(["_#{omitted} additional incomplete-group warnings omitted; see the JSON artifact._", ""])
-        end
+
+        remaining -= visible.length
+        omitted = changes.length - visible.length
+        lines.concat(["_#{omitted} additional memberships omitted; see the JSON artifact._", ""]) if omitted.positive?
+        lines.concat(["</details>", ""])
       end
+
+      lines.concat(["> #{LIMITATION}", ""])
       lines.join("\n")
     end
 
@@ -170,16 +154,13 @@ module Entitlements
     private_class_method :indexed_memberships
 
     def self.snapshot_metadata(snapshot)
-      snapshot.slice("source_sha", "people_snapshot_sha256", "evaluated_at", "complete")
+      snapshot.slice("source_sha", "people_snapshot_sha256", "evaluated_at")
     end
     private_class_method :snapshot_metadata
 
     def self.scoped_snapshot(snapshot, affected_groups)
       included = affected_groups.to_set
-      warnings = snapshot_warnings(snapshot).select { |warning| included.include?(warning.fetch("entitlement_group")) }
       snapshot.merge(
-        "complete" => warnings.empty?,
-        "warnings" => warnings,
         "memberships" => snapshot.fetch("memberships").select do |record|
           included.include?(record.fetch("entitlement_group"))
         end
@@ -187,8 +168,13 @@ module Entitlements
     end
     private_class_method :scoped_snapshot
 
+    def self.escape_html(value)
+      CGI.escapeHTML(value.to_s.gsub(/[\r\n]+/, " "))
+    end
+    private_class_method :escape_html
+
     def self.escape_table(value)
-      CGI.escapeHTML(value.to_s.gsub(/[\r\n]+/, " ")).gsub("|") { "&#124;" }
+      escape_html(value).gsub("|") { "&#124;" }
     end
     private_class_method :escape_table
 
@@ -196,15 +182,5 @@ module Entitlements
       "#{count} #{count == 1 ? 'membership' : 'memberships'}"
     end
     private_class_method :membership_count
-
-    def self.snapshot_complete?(snapshot)
-      snapshot.fetch("complete", true)
-    end
-    private_class_method :snapshot_complete?
-
-    def self.snapshot_warnings(snapshot)
-      snapshot.fetch("warnings", [])
-    end
-    private_class_method :snapshot_warnings
   end
 end
