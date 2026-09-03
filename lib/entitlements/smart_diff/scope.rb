@@ -14,19 +14,12 @@ module Entitlements
         all_groups = base.fetch(:groups) | head.fetch(:groups)
         changed_groups = changed_groups(base, head)
         reverse_dependencies = reverse_dependencies(base, head, all_groups)
+        dynamic_groups = dependency_closure(
+          base.fetch(:dynamic_groups) | head.fetch(:dynamic_groups),
+          reverse_dependencies
+        )
 
-        affected = changed_groups.dup
-        pending = changed_groups.to_a
-        until pending.empty?
-          group = pending.shift
-          reverse_dependencies.fetch(group, Set.new).each do |dependent|
-            next if affected.include?(dependent)
-
-            affected.add(dependent)
-            pending << dependent
-          end
-        end
-        affected.to_a.sort
+        (dependency_closure(changed_groups, reverse_dependencies) - dynamic_groups).to_a.sort
       end
 
       def self.catalog(config_file:, tree:, evaluated_at:)
@@ -42,6 +35,7 @@ module Entitlements
         files = {}
         path_groups = Hash.new { |hash, key| hash[key] = Set.new }
         references = Hash.new { |hash, key| hash[key] = Set.new }
+        dynamic_groups = Set.new
         mirrors = []
 
         groups_config.each do |group_name, group_config|
@@ -65,7 +59,10 @@ module Entitlements
             groups.add(group_id)
             path_groups[relative_path].add(group_id)
             files[relative_path] = Digest::SHA256.file(filename).hexdigest
-            next if File.extname(filename) == ".rb"
+            if File.extname(filename) == ".rb"
+              dynamic_groups.add(group_id)
+              next
+            end
 
             ruleset = Entitlements::Data::Groups::Calculated.ruleset(
               filename: filename,
@@ -81,6 +78,7 @@ module Entitlements
             mirror_group = "#{mirror_name}/#{source_group.delete_prefix("#{source_name}/")}"
             groups.add(mirror_group)
             references[mirror_group].add(source_group)
+            dynamic_groups.add(mirror_group) if dynamic_groups.include?(source_group)
           end
         end
 
@@ -89,7 +87,8 @@ module Entitlements
           files: files,
           groups: groups,
           path_groups: path_groups,
-          references: references
+          references: references,
+          dynamic_groups: dynamic_groups
         }
       ensure
         Entitlements.reset!
@@ -149,6 +148,22 @@ module Entitlements
         end
       end
       private_class_method :changed_groups
+
+      def self.dependency_closure(initial_groups, reverse_dependencies)
+        result = initial_groups.dup
+        pending = initial_groups.to_a
+        until pending.empty?
+          group = pending.shift
+          reverse_dependencies.fetch(group, Set.new).each do |dependent|
+            next if result.include?(dependent)
+
+            result.add(dependent)
+            pending << dependent
+          end
+        end
+        result
+      end
+      private_class_method :dependency_closure
 
       def self.reverse_dependencies(base, head, all_groups)
         result = Hash.new { |hash, key| hash[key] = Set.new }

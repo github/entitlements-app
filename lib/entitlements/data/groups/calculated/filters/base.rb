@@ -31,16 +31,18 @@ module Entitlements
             # config - Configuration data (Hash, optional)
             Contract C::KeywordArgs[
               filter: C::Or[:none, C::ArrayOf[String]],
-              config: C::Maybe[Hash]
+              config: C::Maybe[Hash],
+              options: C::Optional[C::HashOf[Symbol => C::Any]]
             ] => C::Any
-            def initialize(filter:, config: {})
+            def initialize(filter:, config: {}, options: {})
               @filter = filter
               @config = config
+              @options = options
             end
 
             private
 
-            attr_reader :config, :filter
+            attr_reader :config, :filter, :options
 
             # Helper method: Determine if the person is listed in an array of filter conditions.
             # Filter conditions that have no `/` are interpreted to be usernames, whereas filter
@@ -79,6 +81,7 @@ module Entitlements
               Entitlements.cache[:member_of_named_group][group_ref] ||= begin
                 member_set = Entitlements::Data::Groups::Calculated::Rules::Group.matches(
                   value: group_ref,
+                  options: options
                 )
                 member_set.map { |person| person.uid.downcase }
               end

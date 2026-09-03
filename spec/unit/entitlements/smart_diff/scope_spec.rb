@@ -90,4 +90,25 @@ describe Entitlements::SmartDiff::Scope do
       "excluded_paths" => ["excluded"]
     })).to be true
   end
+
+  it "omits dynamic groups and all groups that depend on them" do
+    Dir.mktmpdir do |base|
+      Dir.mktmpdir do |head|
+        [base, head].each do |tree|
+          FileUtils.cp_r(Dir.glob(File.join(fixture("dynamic-groups"), "*")), tree)
+        end
+        File.open(File.join(head, "groups", "teams", "dynamic.rb"), "a") do |file|
+          file.puts "# changed"
+        end
+
+        expect(described_class.affected_groups(
+          base_config: File.join(base, "config.yaml"),
+          head_config: File.join(head, "config.yaml"),
+          base_tree: base,
+          head_tree: head,
+          evaluated_at: "2026-09-02T19:58:54Z"
+        )).to eq([])
+      end
+    end
+  end
 end

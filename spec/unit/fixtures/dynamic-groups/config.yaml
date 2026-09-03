@@ -6,6 +6,13 @@ people:
     config:
       filename: unavailable.yaml
 people_data_source: original
+filters:
+  dynamic_members:
+    class: Entitlements::Data::Groups::Calculated::Filters::MemberOfGroup
+    config:
+      group: teams/dynamic
+      included_paths:
+        - filtered.txt
 groups:
   teams:
     type: dummy

@@ -102,12 +102,45 @@ module Entitlements
   #
   # Takes no arguments.
   def self.reset_rule_classes!
-    return unless const_defined?(:Rule, false)
-
-    Entitlements::Rule.constants(false).each do |constant|
-      Entitlements::Rule.send(:remove_const, constant) unless constant == :Base
+    Array(@loaded_rule_constant_paths).sort_by { |path| -path.count(":") }.each do |path|
+      parent_name, _, constant_name = path.rpartition("::")
+      parent = Kernel.const_get(parent_name)
+      constant = constant_name.to_sym
+      parent.send(:remove_const, constant) if parent.const_defined?(constant, false)
     end
+    @loaded_rule_constant_paths = nil
   end
+
+  # Return all constants currently defined below Entitlements::Rule.
+  #
+  # Takes no arguments.
+  def self.rule_constant_paths
+    return Set.new unless const_defined?(:Rule, false)
+
+    collect_rule_constant_paths(Entitlements::Rule, "Entitlements::Rule", Set.new, Set.new)
+  end
+
+  # Record constants introduced by loading an entitlement Ruby file.
+  #
+  # paths - Set of fully qualified constant names.
+  def self.record_rule_constants(paths)
+    @loaded_rule_constant_paths ||= Set.new
+    @loaded_rule_constant_paths.merge(paths)
+  end
+
+  def self.collect_rule_constant_paths(namespace, prefix, result, visited)
+    return result if visited.include?(namespace.object_id)
+
+    visited.add(namespace.object_id)
+    namespace.constants(false).each do |constant|
+      path = "#{prefix}::#{constant}"
+      result.add(path)
+      value = namespace.const_get(constant, false)
+      collect_rule_constant_paths(value, path, result, visited) if value.is_a?(Module)
+    end
+    result
+  end
+  private_class_method :collect_rule_constant_paths
 
   # Return the time used for date-sensitive entitlement evaluation.
   #
