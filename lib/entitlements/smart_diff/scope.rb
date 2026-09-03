@@ -6,12 +6,11 @@ require "set"
 module Entitlements
   class SmartDiff
     class Scope
-      GROUP_REFERENCE = /^\s*(?:-\s*)?(?:group|entitlements_group)\s*(?:!=|=|:)\s*["']?([^"'\s#]+)/
       GROUP_FILE_EXTENSIONS = %w[.rb .txt .yaml].freeze
 
-      def self.affected_groups(base_config:, head_config:, base_tree:, head_tree:)
-        base = catalog(config_file: base_config, tree: base_tree)
-        head = catalog(config_file: head_config, tree: head_tree)
+      def self.affected_groups(base_config:, head_config:, base_tree:, head_tree:, evaluated_at:)
+        base = catalog(config_file: base_config, tree: base_tree, evaluated_at: evaluated_at)
+        head = catalog(config_file: head_config, tree: head_tree, evaluated_at: evaluated_at)
         all_groups = base.fetch(:groups) | head.fetch(:groups)
         changed_groups = changed_groups(base, head)
         reverse_dependencies = reverse_dependencies(base, head, all_groups)
@@ -30,12 +29,15 @@ module Entitlements
         affected.to_a.sort
       end
 
-      def self.catalog(config_file:, tree:)
+      def self.catalog(config_file:, tree:, evaluated_at:)
         original_dir = ENV["DIR"]
         ENV["DIR"] = File.expand_path(tree)
         Entitlements.reset!
         Entitlements.config_file = config_file
         groups_config = Entitlements.config.fetch("groups")
+        Entitlements.evaluation_time = Time.iso8601(evaluated_at.to_s)
+        Entitlements.load_extras if Entitlements.config.key?("extras")
+        Entitlements.register_filters if Entitlements.config.key?("filters")
         groups = Set.new
         files = {}
         path_groups = Hash.new { |hash, key| hash[key] = Set.new }
@@ -65,10 +67,12 @@ module Entitlements
             files[relative_path] = Digest::SHA256.file(filename).hexdigest
             next if File.extname(filename) == ".rb"
 
-            File.foreach(filename) do |line|
-              match = GROUP_REFERENCE.match(line)
-              references[group_id].add(match[1]) if match
-            end
+            ruleset = Entitlements::Data::Groups::Calculated.ruleset(
+              filename: filename,
+              config: group_config
+            )
+            collect_group_references(ruleset.send(:rules), references[group_id])
+            collect_filter_references(ruleset, filename, references[group_id])
           end
         end
 
@@ -92,6 +96,46 @@ module Entitlements
         original_dir ? ENV["DIR"] = original_dir : ENV.delete("DIR")
       end
       private_class_method :catalog
+
+      def self.collect_group_references(value, result)
+        case value
+        when Array
+          value.each { |item| collect_group_references(item, result) }
+        when Hash
+          value.each do |key, item|
+            if %w[group entitlements_group].include?(key) && item.is_a?(String)
+              result.add(item)
+            else
+              collect_group_references(item, result)
+            end
+          end
+        end
+      end
+      private_class_method :collect_group_references
+
+      def self.collect_filter_references(ruleset, filename, result)
+        ruleset.filters.each do |filter_name, filter_value|
+          next if filter_value == :all
+
+          filter = Entitlements::Data::Groups::Calculated.filters_index.fetch(filter_name)
+          next unless filter.fetch(:class) <= Entitlements::Data::Groups::Calculated::Filters::MemberOfGroup
+          next unless filter_applies?(filename, filter.fetch(:config))
+
+          result.add(filter.fetch(:config).fetch("group"))
+        end
+      end
+      private_class_method :collect_filter_references
+
+      def self.filter_applies?(filename, config)
+        included = config.fetch("included_paths", [])
+        excluded = config.fetch("excluded_paths", [])
+        return true if included.empty? && excluded.empty?
+
+        excluded_match = excluded.any? { |path| filename.include?(path) }
+        included_match = included.any? { |path| filename.include?(path) }
+        (!excluded.empty? && !excluded_match) || (!included.empty? && included_match)
+      end
+      private_class_method :filter_applies?
 
       def self.changed_groups(base, head)
         return base.fetch(:groups) | head.fetch(:groups) if base.fetch(:config_digest) != head.fetch(:config_digest)
