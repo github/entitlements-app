@@ -18,7 +18,8 @@ module Entitlements
                             base_config: base_config,
                             head_config: head_config,
                             base_tree: base_tree,
-                            head_tree: head_tree
+                            head_tree: head_tree,
+                            evaluated_at: evaluated_at
                           )
                         end
       common = {people_source: people_source, evaluated_at: evaluated_at}
@@ -93,8 +94,8 @@ module Entitlements
         "**#{membership_count(result.fetch('counts').fetch('gains'))} added; " \
           "#{membership_count(result.fetch('counts').fetch('losses'))} removed.**",
         "",
-        "Base: `#{escape_inline(result.fetch('base').fetch('source_sha'))}`  ",
-        "Head: `#{escape_inline(result.fetch('head').fetch('source_sha'))}`",
+        "Base: `#{result.fetch('base').fetch('source_sha')}`  ",
+        "Head: `#{result.fetch('head').fetch('source_sha')}`",
         ""
       ])
       if result["scope"]
@@ -150,6 +151,9 @@ module Entitlements
       %w[source_sha people_snapshot_sha256 evaluated_at memberships].each do |key|
         raise ArgumentError, "#{label} snapshot is missing #{key}" unless snapshot.key?(key)
       end
+      unless snapshot.fetch("source_sha").is_a?(String) && snapshot.fetch("source_sha").match?(/\A[0-9a-f]{7,64}\z/i)
+        raise ArgumentError, "#{label} snapshot has an invalid source_sha"
+      end
       raise ArgumentError, "#{label} memberships must be an array" unless snapshot["memberships"].is_a?(Array)
     end
     private_class_method :validate_snapshot!
@@ -184,15 +188,9 @@ module Entitlements
     private_class_method :scoped_snapshot
 
     def self.escape_table(value)
-      escaped = value.to_s.gsub(/[\r\n]+/, " ").gsub("\\") { "\\\\" }
-      CGI.escapeHTML(escaped).gsub("|") { "\\|" }
+      CGI.escapeHTML(value.to_s.gsub(/[\r\n]+/, " ")).gsub("|") { "&#124;" }
     end
     private_class_method :escape_table
-
-    def self.escape_inline(value)
-      value.to_s.gsub(/[\r\n]+/, " ").gsub("\\") { "\\\\" }.gsub("`") { "\\`" }
-    end
-    private_class_method :escape_inline
 
     def self.membership_count(count)
       "#{count} #{count == 1 ? 'membership' : 'memberships'}"

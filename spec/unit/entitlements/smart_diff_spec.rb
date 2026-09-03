@@ -37,7 +37,7 @@ describe Entitlements::SmartDiff do
     expect(result["base"]).not_to have_key("memberships")
     expect(markdown).to include("1 membership added; 1 membership removed")
     expect(markdown).to include("&lt;alice&gt;")
-    expect(markdown).to include("teams/new\\\\\\|group")
+    expect(markdown).to include("teams/new\\&#124;group")
     expect(markdown).to include(described_class::LIMITATION)
     expect(described_class.json(result)).to end_with("\n")
   end
@@ -131,5 +131,6 @@ describe Entitlements::SmartDiff do
     expect { described_class.compare(base: base, head: head.merge("evaluated_at" => "other")) }.to raise_error(ArgumentError, /evaluation timestamps/)
     expect { described_class.compare(base: base, head: head, markdown_limit: 0) }.to raise_error(ArgumentError, /markdown_limit/)
     expect { described_class.compare(base: base.merge("memberships" => ["bad"]), head: head) }.to raise_error(ArgumentError, /Invalid membership/)
+    expect { described_class.compare(base: base.merge("source_sha" => "`bad`"), head: head) }.to raise_error(ArgumentError, /source_sha/)
   end
 end
