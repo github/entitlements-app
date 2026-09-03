@@ -91,11 +91,11 @@ describe Entitlements::DesiredGroups do
     expect(result["warnings"]).to eq([
       {
         "entitlement_group" => "teams/dynamic",
-        "message" => "Dynamic group teams/dynamic uses arbitrary Ruby code and environment variables and network client and live GitHub service"
+        "message" => "Dynamic group teams/dynamic uses arbitrary Ruby code"
       },
       {
         "entitlement_group" => "teams/dependent",
-        "message" => "Dynamic group teams/dynamic uses arbitrary Ruby code and environment variables and network client and live GitHub service"
+        "message" => "Dynamic group teams/dynamic uses arbitrary Ruby code"
       },
       {
         "entitlement_group" => "teams/static-ruby",
@@ -103,11 +103,11 @@ describe Entitlements::DesiredGroups do
       },
       {
         "entitlement_group" => "teams_mirror/dynamic",
-        "message" => "Dynamic group teams/dynamic uses arbitrary Ruby code and environment variables and network client and live GitHub service"
+        "message" => "Dynamic group teams/dynamic uses arbitrary Ruby code"
       },
       {
         "entitlement_group" => "teams_mirror/dependent",
-        "message" => "Dynamic group teams/dynamic uses arbitrary Ruby code and environment variables and network client and live GitHub service"
+        "message" => "Dynamic group teams/dynamic uses arbitrary Ruby code"
       },
       {
         "entitlement_group" => "teams_mirror/static-ruby",
