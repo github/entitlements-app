@@ -44,7 +44,7 @@ cp /acceptance/ldap-server/env/*.yaml /container/environment/99-default
 # Pre-install our schema (after killing most of the defaults from the container)
 rm -f /container/service/slapd/assets/config/bootstrap/ldif/0[345]*.ldif
 rm -rf /container/service/slapd/assets/config/bootstrap/schema/mmc
-rm -f /etc/ldap/schema/*
+rm -f /etc/ldap/schema/*.ldif
 cp /acceptance/ldap-server/schema/* /etc/ldap/schema/
 cp /acceptance/ldap-server/ldif/bootstrap/*.ldif /container/service/slapd/assets/config/bootstrap/ldif
 
