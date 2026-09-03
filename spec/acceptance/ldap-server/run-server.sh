@@ -49,7 +49,7 @@ cp /acceptance/ldap-server/schema/* /etc/ldap/schema/
 cp /acceptance/ldap-server/ldif/bootstrap/*.ldif /container/service/slapd/assets/config/bootstrap/ldif
 
 # Launch openldap
-nohup /usr/bin/python -u /container/tool/run -l debug &
+nohup /usr/bin/python -u /container/tool/run -l info &
 OPENLDAP_PID=$!
 
 # Wait for the process to be running and connectable
