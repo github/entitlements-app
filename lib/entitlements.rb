@@ -376,9 +376,14 @@ module Entitlements
     tags = [
       "application:entitlements",
       "kube_pod_name:#{ENV.fetch('KUBE_POD_NAME', 'not-on-kubernetes')}",
-      "app_env:#{ENV.fetch('APP_ENV', 'development')}"
+      "app_env:#{ENV.fetch('APP_ENV', 'development')}",
+      "deployment_id:#{metric_deployment_id}"
     ]
     Datadog::Statsd.new(host, port, tags: tags)
+  end
+
+  def self.metric_deployment_id
+    ENV["HEAVEN_DEPLOYMENT_ID"] || ENV["GITHUB_RUN_ID"] || "not-in-deployment"
   end
 
   def self.timed_operation(phase:, provider: nil, target: nil, span: "leaf", concurrent: false, count: nil)

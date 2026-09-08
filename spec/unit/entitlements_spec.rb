@@ -178,6 +178,7 @@ describe Entitlements do
       allow(ENV).to receive(:fetch).with("DOGSTATSD_PORT", 28_125).and_return("28125")
       allow(ENV).to receive(:fetch).with("KUBE_POD_NAME", "not-on-kubernetes").and_return("entitlements-123")
       allow(ENV).to receive(:fetch).with("APP_ENV", "development").and_return("production")
+      allow(described_class).to receive(:metric_deployment_id).and_return("123456")
       allow(Resolv).to receive(:getaddress).with("dogstatsd.example.com").and_return("192.0.2.1")
 
       expect(Datadog::Statsd).to receive(:new).with(
@@ -186,11 +187,34 @@ describe Entitlements do
         tags: [
           "application:entitlements",
           "kube_pod_name:entitlements-123",
-          "app_env:production"
+          "app_env:production",
+          "deployment_id:123456"
         ]
       ).and_return(statsd)
 
       expect(described_class.build_statsd).to eq(statsd)
+    end
+  end
+
+  describe "#metric_deployment_id" do
+    it "uses the Heaven deployment ID when available" do
+      allow(ENV).to receive(:[]).with("HEAVEN_DEPLOYMENT_ID").and_return("123456")
+
+      expect(described_class.metric_deployment_id).to eq("123456")
+    end
+
+    it "uses the GitHub Actions run ID for CI jobs" do
+      allow(ENV).to receive(:[]).with("HEAVEN_DEPLOYMENT_ID").and_return(nil)
+      allow(ENV).to receive(:[]).with("GITHUB_RUN_ID").and_return("789012")
+
+      expect(described_class.metric_deployment_id).to eq("789012")
+    end
+
+    it "uses a stable fallback outside deployment and CI runs" do
+      allow(ENV).to receive(:[]).with("HEAVEN_DEPLOYMENT_ID").and_return(nil)
+      allow(ENV).to receive(:[]).with("GITHUB_RUN_ID").and_return(nil)
+
+      expect(described_class.metric_deployment_id).to eq("not-in-deployment")
     end
   end
 
