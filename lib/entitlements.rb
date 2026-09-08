@@ -16,9 +16,11 @@ end
 # :nocov:
 
 require "contracts"
+require "datadog/statsd"
 require "erb"
 require "logger"
 require "ostruct"
+require "resolv"
 require "stringio"
 require "uri"
 require "yaml"
@@ -89,6 +91,7 @@ module Entitlements
     @config_file = nil
     @config_path_override = nil
     @person_extra_methods = {}
+    @statsd = nil
 
     reset_extras!
     Entitlements::Data::Groups::Calculated.reset!
@@ -354,6 +357,53 @@ module Entitlements
   end
   # :nocov:
 
+  def self.statsd
+    @statsd ||= build_statsd
+  end
+
+  def self.set_statsd(statsd)
+    @statsd = statsd
+  end
+
+  def self.close_statsd
+    @statsd&.close
+    @statsd = nil
+  end
+
+  def self.build_statsd
+    host = Resolv.getaddress(ENV.fetch("DOGSTATSD_HOST", "localhost"))
+    port = Integer(ENV.fetch("DOGSTATSD_PORT", 28_125))
+    tags = [
+      "application:entitlements",
+      "kube_pod_name:#{ENV.fetch('KUBE_POD_NAME', 'not-on-kubernetes')}",
+      "app_env:#{ENV.fetch('APP_ENV', 'development')}",
+      "deployment_id:#{metric_deployment_id}"
+    ]
+    Datadog::Statsd.new(host, port, tags: tags)
+  end
+
+  def self.metric_deployment_id
+    ENV["HEAVEN_DEPLOYMENT_ID"] || ENV["GITHUB_RUN_ID"] || "not-in-deployment"
+  end
+
+  def self.timed_operation(phase:, provider: nil, target: nil, span: "leaf", concurrent: false, count: nil)
+    tags = [
+      "phase:#{phase}",
+      "status:error",
+      "span:#{span}",
+      "concurrent:#{concurrent}"
+    ]
+    tags << "provider:#{provider}" if provider
+    tags << "target:#{target}" if target
+    tags << "count:#{count}" if count
+
+    statsd.time("entitlements.operation.duration", tags: tags) do
+      result = yield
+      tags[1] = "status:success"
+      result
+    end
+  end
+
   # Calculate - This runs the entitlements logic to calculate the differences, ultimately
   # populating a cache and returning a list of actions. The cache and actions can then be
   # consumed by `execute` to implement the changes.
@@ -363,14 +413,22 @@ module Entitlements
   # Returns the array of actions.
   Contract C::None => C::ArrayOf[Entitlements::Models::Action]
   def self.calculate
+    timed_operation(phase: "calculate_total", span: "parent") { calculate_actions }
+  end
+
+  def self.calculate_actions
     # Load extras that are configured.
-    Entitlements.load_extras if Entitlements.config.key?("extras")
+    if Entitlements.config.key?("extras")
+      timed_operation(phase: "load_extras") { Entitlements.load_extras }
+    end
 
     # Pre-fetch people from configured people data sources.
-    Entitlements.prefetch_people
+    timed_operation(phase: "prefetch_people") { Entitlements.prefetch_people }
 
     # Register filters that are configured.
-    Entitlements.register_filters if Entitlements.config.key?("filters")
+    if Entitlements.config.key?("filters")
+      timed_operation(phase: "register_filters") { Entitlements.register_filters }
+    end
 
     # Keep track of the total change count.
     cache[:change_count] = 0
@@ -385,8 +443,9 @@ module Entitlements
       Concurrent::Future.execute({ executor: thread_pool }) do
         group_start = Time.now
         logger.debug("Begin prefetch and validate for #{group_name}")
-        obj.prefetch
-        obj.validate
+        provider = Entitlements.config["groups"].fetch(group_name).fetch("type")
+        timed_operation(phase: "prefetch", provider: provider, target: group_name, concurrent: true) { obj.prefetch }
+        timed_operation(phase: "validate", provider: provider, target: group_name, concurrent: true) { obj.validate }
         logger.debug("Finished prefetch and validate for #{group_name} in #{Time.now - group_start}")
       end
     end
@@ -398,7 +457,8 @@ module Entitlements
     calc_start = Time.now
     actions = []
     Entitlements.child_classes.map do |group_name, obj|
-      obj.calculate
+      provider = Entitlements.config["groups"].fetch(group_name).fetch("type")
+      timed_operation(phase: "calculate", provider: provider, target: group_name) { obj.calculate }
       if obj.change_count > 0
         logger.debug "Group #{group_name.inspect} contributes #{obj.change_count} change(s)."
         cache[:change_count] += obj.change_count
@@ -422,8 +482,14 @@ module Entitlements
     actions: C::ArrayOf[Entitlements::Models::Action]
   ] => nil
   def self.execute(actions:)
+    timed_operation(phase: "execute_total", span: "parent") { execute_actions(actions: actions) }
+  end
+
+  def self.execute_actions(actions:)
     # Set up auditors.
-    Entitlements.auditors.each { |auditor| auditor.setup }
+    Entitlements.auditors.each do |auditor|
+      timed_operation(phase: "audit_setup", provider: auditor.provider_id) { auditor.setup }
+    end
 
     # Track any raised exception to pass to the auditors.
     provider_exception = nil
@@ -433,14 +499,18 @@ module Entitlements
     # Sort the child classes by priority
     begin
       # Pre-apply changes for each class.
-      Entitlements.child_classes.each do |_, obj|
-        obj.preapply
+      Entitlements.child_classes.each do |group_name, obj|
+        provider = Entitlements.config["groups"].fetch(group_name).fetch("type")
+        timed_operation(phase: "preapply", provider: provider, target: group_name) { obj.preapply }
       end
 
       # Apply changes from all actions.
       actions.each do |action|
         obj = Entitlements.child_classes.fetch(action.ou)
-        obj.apply(action)
+        provider = Entitlements.config["groups"].fetch(action.ou).fetch("type")
+        timed_operation(phase: "apply", provider: provider, target: action.ou, count: 1) do
+          obj.apply(action)
+        end
         successful_actions.add(action.dn)
       end
     rescue => e
@@ -457,11 +527,13 @@ module Entitlements
         logger.debug "Recording data to #{Entitlements.auditors.size} audit provider(s)"
         Entitlements.auditors.each do |audit|
           begin
-            audit.commit(
-              actions: actions,
-              successful_actions: successful_actions,
-              provider_exception: provider_exception
-            )
+            timed_operation(phase: "audit_commit", provider: audit.provider_id) do
+              audit.commit(
+                actions: actions,
+                successful_actions: successful_actions,
+                provider_exception: provider_exception
+              )
+            end
             logger.debug "Audit #{audit.description} completed successfully"
           rescue => e
             logger.error "Audit #{audit.description} failed: #{e.class} #{e.message}"
@@ -564,7 +636,9 @@ module Entitlements
 
       objects = people_data_sources.map do |ds_name, ds_config|
         people_obj = Entitlements::Data::People.new_from_config(ds_config)
-        people_obj.read
+        timed_operation(phase: "prefetch_people_source", provider: ds_config.fetch("type"), target: ds_name) do
+          people_obj.read
+        end
         [ds_name, people_obj]
       end.to_h
 

@@ -134,6 +134,11 @@ module MyLetDeclarations
   let(:entitlements_config_file) { fixture("config.yaml") }
   let(:entitlements_config_hash) { nil }
   let(:logger) { Entitlements.dummy_logger }
+  let(:statsd) do
+    instance_double(Datadog::Statsd).tap do |client|
+      allow(client).to receive(:time) { |*, &block| block.call }
+    end
+  end
 end
 
 module Contracts
@@ -163,6 +168,7 @@ RSpec.configure do |config|
       Entitlements.validate_configuration_file!
     end
     Entitlements.set_logger(logger)
+    Entitlements.set_statsd(statsd)
   end
 
   config.after :each do
