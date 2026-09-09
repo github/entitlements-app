@@ -1,0 +1,7 @@
+---
+description: Expiring membership
+rules:
+  or:
+    - username: Alice
+      expiration: "2026-09-02"
+    - username: bob

@@ -118,7 +118,7 @@ module Entitlements
               filters.reject { |_, filter_val| filter_val == :all }.each do |filter_name, filter_val|
                 filter_cfg = Entitlements::Data::Groups::Calculated.filters_index[filter_name]
                 clazz = filter_cfg.fetch(:class)
-                obj = clazz.new(filter: filter_val, config: filter_cfg.fetch(:config, {}))
+                obj = clazz.new(filter: filter_val, config: filter_cfg.fetch(:config, {}), options: options)
                 # If excluded_paths is set, ignore any of those excluded paths
                 unless filter_cfg[:config]["excluded_paths"].nil?
                   # if the filename is not in any of the excluded paths, filter it
@@ -217,7 +217,7 @@ module Entitlements
             return false if expiration.nil? || expiration.strip.empty?
             if expiration =~ /\A(\d{4})-(\d{2})-(\d{2})\z/
               year, month, day = Regexp.last_match(1).to_i, Regexp.last_match(2).to_i, Regexp.last_match(3).to_i
-              return Time.utc(year, month, day, 0, 0, 0) <= Time.now.utc
+              return Time.utc(year, month, day, 0, 0, 0) <= Entitlements.evaluation_time.utc
             end
             message = "Invalid expiration date #{expiration.inspect} in #{context} (expected format: YYYY-MM-DD)"
             raise ArgumentError, message
@@ -243,7 +243,16 @@ module Entitlements
             Entitlements.cache[:dependencies] << "#{rou}/#{cn}"
 
             # Actually calculate it.
-            Entitlements.cache[:calculated][rou][cn] = _members_from_rules(rule)
+            begin
+              Entitlements.cache[:calculated][rou][cn] = _members_from_rules(rule)
+            rescue Entitlements::Data::Groups::Calculated::DynamicGroupError
+              raise unless options[:skip_dynamic_groups]
+
+              Entitlements.cache[:calculated][rou].delete(cn)
+              Entitlements.cache[:dependencies].delete("#{rou}/#{cn}")
+              Entitlements.cache.fetch(:file_objects, {}).delete(filename)
+              raise
+            end
 
             # This should be the last item on the dependencies array, so pop it off.
             unless Entitlements.cache[:dependencies].last == "#{rou}/#{cn}"
@@ -340,7 +349,7 @@ module Entitlements
           # Returns C::SetOf[Entitlements::Models::Person] from a recursive call.
           def handle_and(rule)
             ensure_type!("and", rule, Array)
-            return result unless rule.any?
+            return Set.new unless rule.any?
 
             first_rule = rule.shift
             ensure_type!("and", first_rule, Hash)

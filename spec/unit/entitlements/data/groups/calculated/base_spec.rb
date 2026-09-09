@@ -158,6 +158,43 @@ describe Entitlements::Data::Groups::Calculated::Base do
       end
     end
 
+    context "with an empty 'and' rule set" do
+      let(:file) { fixture("ldap-config/logic_tests/simple_and.yaml") }
+      let(:obj) { Entitlements::Data::Groups::Calculated::YAML.new(filename: file, config: config) }
+
+      it "returns an empty set" do
+        expect(obj.send(:handle_and, [])).to eq(Set.new)
+      end
+    end
+
+    context "when a dynamic dependency interrupts calculation" do
+      let(:file) { fixture("ldap-config/logic_tests/simple_and.yaml") }
+      let(:options) { {skip_dynamic_groups: true} }
+      let(:obj) { Entitlements::Data::Groups::Calculated::YAML.new(filename: file, config: config, options: options) }
+
+      it "removes the partially calculated file object for smart diff" do
+        Entitlements.cache[:file_objects] = {file => obj}
+        allow(obj).to receive(:_members_from_rules)
+          .and_raise(Entitlements::Data::Groups::Calculated::DynamicGroupError, "dynamic")
+
+        expect { obj.send(:members_from_rules, {"always" => false}) }
+          .to raise_error(Entitlements::Data::Groups::Calculated::DynamicGroupError, "dynamic")
+        expect(Entitlements.cache[:file_objects]).not_to have_key(file)
+      end
+
+      it "preserves the normal error state outside smart diff" do
+        obj = Entitlements::Data::Groups::Calculated::YAML.new(filename: file, config: config)
+        Entitlements.cache[:file_objects] = {file => obj}
+        allow(obj).to receive(:_members_from_rules)
+          .and_raise(Entitlements::Data::Groups::Calculated::DynamicGroupError, "dynamic")
+
+        expect { obj.send(:members_from_rules, {"always" => false}) }
+          .to raise_error(Entitlements::Data::Groups::Calculated::DynamicGroupError, "dynamic")
+        expect(Entitlements.cache[:file_objects]).to have_key(file)
+        expect(Entitlements.cache[:calculated][obj.send(:rou)][obj.send(:cn)]).to eq(:calculating)
+      end
+    end
+
     context "with a simple 'or' rule set" do
       let(:file) { fixture("ldap-config/logic_tests/simple_or.yaml") }
       let(:obj) { Entitlements::Data::Groups::Calculated::YAML.new(filename: file, config: config) }

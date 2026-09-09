@@ -21,6 +21,16 @@ describe Entitlements::Data::Groups::Calculated::YAML do
       expect(result.size).to eq(2)
       expect(result.map { |i| i.uid }.sort).to eq(answer)
     end
+
+    it "does not cache the calculating sentinel" do
+      filename = fixture("ldap-config/filters/no-filters.yaml")
+      subject = described_class.new(filename: filename)
+      members = Set.new([people_obj.read["blackmanx"]])
+      allow(subject).to receive(:members_from_rules).and_return(:calculating, members)
+
+      expect(subject.members).to eq(:calculating)
+      expect(subject.members).to eq(members)
+    end
   end
 
   describe "#description" do

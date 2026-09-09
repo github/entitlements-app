@@ -1,0 +1,2 @@
+description = Static group
+username = Alice

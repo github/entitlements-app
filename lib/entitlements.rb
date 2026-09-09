@@ -4,6 +4,7 @@
 # Load third party dependencies first.
 require "concurrent"
 require "ruby_version_check"
+require "time"
 
 # contracts.ruby has two specific ruby-version specific libraries, which we have vendored into lib/
 
@@ -90,11 +91,76 @@ module Entitlements
     @config = nil
     @config_file = nil
     @config_path_override = nil
+    @evaluation_time = nil
     @person_extra_methods = {}
     @statsd = nil
 
     reset_extras!
+    reset_rule_classes!
     Entitlements::Data::Groups::Calculated.reset!
+  end
+
+  # Remove classes loaded from Ruby entitlement files so separate evaluations cannot
+  # retain class-level descriptions, filters, metadata, or methods.
+  #
+  # Takes no arguments.
+  def self.reset_rule_classes!
+    Array(@loaded_rule_constant_paths).sort_by { |path| -path.count(":") }.each do |path|
+      parent_name, _, constant_name = path.rpartition("::")
+      parent = Kernel.const_get(parent_name)
+      constant = constant_name.to_sym
+      parent.send(:remove_const, constant) if parent.const_defined?(constant, false)
+    end
+    @loaded_rule_constant_paths = nil
+  end
+
+  # Return all constants currently defined below Entitlements::Rule.
+  #
+  # Takes no arguments.
+  def self.rule_constant_paths
+    return Set.new unless const_defined?(:Rule, false)
+
+    collect_rule_constant_paths(Entitlements::Rule, "Entitlements::Rule", Set.new, Set.new)
+  end
+
+  # Record constants introduced by loading an entitlement Ruby file.
+  #
+  # paths - Set of fully qualified constant names.
+  def self.record_rule_constants(paths)
+    @loaded_rule_constant_paths ||= Set.new
+    @loaded_rule_constant_paths.merge(paths)
+  end
+
+  def self.collect_rule_constant_paths(namespace, prefix, result, visited)
+    return result if visited.include?(namespace.object_id)
+
+    visited.add(namespace.object_id)
+    namespace.constants(false).each do |constant|
+      path = "#{prefix}::#{constant}"
+      result.add(path)
+      value = namespace.const_get(constant, false)
+      collect_rule_constant_paths(value, path, result, visited) if value.is_a?(Module)
+    end
+    result
+  end
+  private_class_method :collect_rule_constant_paths
+
+  # Return the time used for date-sensitive entitlement evaluation.
+  #
+  # Returns a Time.
+  Contract C::None => Time
+  def self.evaluation_time
+    @evaluation_time || Time.now
+  end
+
+  # Set the time used for date-sensitive entitlement evaluation.
+  #
+  # value - A Time.
+  #
+  # Returns the supplied Time.
+  Contract Time => Time
+  def self.evaluation_time=(value)
+    @evaluation_time = value
   end
 
   def self.reset_extras!
@@ -674,6 +740,7 @@ require_relative "entitlements/backend/member_of"
 require_relative "entitlements/cli"
 require_relative "entitlements/data/groups"
 require_relative "entitlements/data/people"
+require_relative "entitlements/desired_groups"
 require_relative "entitlements/extras"
 require_relative "entitlements/extras/base"
 require_relative "entitlements/models/action"
@@ -685,6 +752,7 @@ require_relative "entitlements/plugins/group_of_names"
 require_relative "entitlements/plugins/posix_group"
 require_relative "entitlements/rule/base"
 require_relative "entitlements/service/ldap"
+require_relative "entitlements/smart_diff"
 require_relative "entitlements/util/mirror"
 require_relative "entitlements/util/override"
 require_relative "entitlements/util/util"

@@ -1,0 +1,3 @@
+description = Filtered by a dynamic group
+filter_dynamic_members = none
+username = Alice

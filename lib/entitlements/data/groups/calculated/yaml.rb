@@ -18,10 +18,12 @@ module Entitlements
           # Returns a Set[String] with DN's of the people in the group.
           Contract C::None => C::Or[:calculating, C::SetOf[Entitlements::Models::Person]]
           def members
-            @members ||= begin
-              Entitlements.logger.debug "Calculating members from #{filename}"
-              members_from_rules(rules)
-            end
+            return @members if @members
+
+            Entitlements.logger.debug "Calculating members from #{filename}"
+            result = members_from_rules(rules)
+            @members = result unless result == :calculating
+            result
           end
 
           # Standard interface: Get the description of this group.

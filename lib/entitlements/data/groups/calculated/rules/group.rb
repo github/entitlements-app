@@ -14,6 +14,10 @@ module Entitlements
               "yaml" => "Entitlements::Data::Groups::Calculated::YAML"
             }
 
+            def self.reset!
+              @files_for_cache = {}
+            end
+
             # Interface method: Get a Set[Entitlements::Models::Person] matching this condition.
             #
             # value    - The value to match.
@@ -66,6 +70,7 @@ module Entitlements
                     clazz = Kernel.const_get(FILE_EXTENSIONS[ext])
                     Entitlements.cache[:file_objects][filebase_with_path] = clazz.new(
                       filename: "#{filebase_with_path}.#{ext}",
+                      options: options
                     )
                     if Entitlements.cache[:file_objects][filebase_with_path].members == :calculating
                       next if matching_files.size > 1
