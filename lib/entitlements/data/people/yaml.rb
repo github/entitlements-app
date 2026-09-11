@@ -73,7 +73,6 @@ module Entitlements
         # uid - Optionally a uid to return. If not specified, returns the entire hash.
         #
         # Returns Hash of { uid => Entitlements::Models::Person } or one Entitlements::Models::Person.
-        Contract C::Maybe[String] => C::Or[Entitlements::Models::Person, C::HashOf[String => Entitlements::Models::Person]]
         def read(uid = nil)
           @people ||= begin
             Entitlements.logger.debug "Loading people from #{filename.inspect}"

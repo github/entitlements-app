@@ -21,11 +21,6 @@ module Entitlements
             # options  - Optional hash of additional method-specific options
             #
             # Returns a Set[Entitlements::Models::Person].
-            Contract C::KeywordArgs[
-              value: String,
-              filename: C::Maybe[String],
-              options: C::Optional[C::HashOf[Symbol => C::Any]]
-            ] => C::SetOf[Entitlements::Models::Person]
             def self.matches(value:, filename: nil, options: {})
               # We've asked for a managed group, so we need to calculate that group and return its members.
               # First parse the value into the ou and cn.
@@ -98,7 +93,6 @@ module Entitlements
             # path - A String with the directory structure relative to Entitlements.config_path
             #
             # Returns a Set of Hashes with { "file_without_extension" => "extension" }
-            Contract String, C::KeywordArgs[options: C::HashOf[Symbol => C::Any]] => C::HashOf[String => String]
             def self.files_for(path, options:)
               @files_for_cache ||= {}
               @files_for_cache[path] ||= begin
