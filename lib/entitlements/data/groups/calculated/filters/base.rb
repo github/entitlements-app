@@ -18,7 +18,6 @@ module Entitlements
             # member - Entitlements::Models::Person object
             #
             # Return true if the member is to be filtered out, false if the member does not match the filter.
-            Contract Entitlements::Models::Person => C::Bool
             def filtered?(_member)
               # :nocov:
               raise "Must be implemented in child class"
@@ -29,10 +28,6 @@ module Entitlements
             #
             # filter - Either :none, :all, or an array of string conditions passed through to the filter
             # config - Configuration data (Hash, optional)
-            Contract C::KeywordArgs[
-              filter: C::Or[:none, C::ArrayOf[String]],
-              config: C::Maybe[Hash]
-            ] => C::Any
             def initialize(filter:, config: {})
               @filter = filter
               @config = config
