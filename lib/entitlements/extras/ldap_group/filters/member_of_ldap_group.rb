@@ -16,7 +16,6 @@ module Entitlements
           # member - Entitlements::Models::Person object
           #
           # Returns true if the person is to be filtered out, false otherwise.
-          Contract Entitlements::Models::Person => C::Bool
           def filtered?(member)
             return false if filter == :all
             return false unless member_of_ldap_group?(member, config.fetch("ldap_group"))
@@ -31,14 +30,13 @@ module Entitlements
           # group_dn - LDAP distinguished name of the group
           #
           # Returns true if a member of the group, false otherwise.
-          Contract Entitlements::Models::Person, String => C::Bool
           def member_of_ldap_group?(member, group_dn)
             Entitlements.cache[:member_of_ldap_group] ||= {}
             Entitlements.cache[:member_of_ldap_group][group_dn] ||= begin
               member_set = Entitlements::Extras::LDAPGroup::Rules::LDAPGroup.matches(value: group_dn)
-              member_set.map { |person| person.uid.downcase }
+              member_set.each_with_object(Set.new) { |person, result| result.add(person.uid.downcase) }
             rescue Entitlements::Data::Groups::GroupNotFoundError
-              []
+              Set.new
             end
 
             Entitlements.cache[:member_of_ldap_group][group_dn].include?(member.uid.downcase)

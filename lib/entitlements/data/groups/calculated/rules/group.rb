@@ -63,9 +63,11 @@ module Entitlements
                   # the cache without going any further. Otherwise, create a new object for the group
                   # reference and calculate them.
                   unless Entitlements.cache[:file_objects][filebase_with_path]
-                    clazz = Kernel.const_get(FILE_EXTENSIONS[ext])
-                    Entitlements.cache[:file_objects][filebase_with_path] = clazz.new(
+                    target_config = Entitlements.config.fetch("groups", {})[ou] || {}
+                    Entitlements.cache[:file_objects][filebase_with_path] = Entitlements::Data::Groups::Calculated.ruleset(
                       filename: "#{filebase_with_path}.#{ext}",
+                      config: target_config,
+                      options: options,
                     )
                     if Entitlements.cache[:file_objects][filebase_with_path].members == :calculating
                       next if matching_files.size > 1
