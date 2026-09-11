@@ -49,20 +49,13 @@ module Entitlements
             # member - Entitlements::Models::Person object
             #
             # Returns true if a member of the filter conditions, false otherwise.
-            Contract Entitlements::Models::Person => C::Bool
             def member_of_filter?(member)
-              # First handle all username entries, regardless of order, because we do not
-              # have to mess around with reading groups for those.
-              filter.reject { |filter_val| filter_val =~ /\// }.each do |filter_val|
-                return true if filter_val.downcase == member.uid.downcase
-              end
+              return true if filter_usernames.include?(member.uid.downcase)
 
-              # Now handle all group entries.
-              filter.select { |filter_val| filter_val =~ /\// }.each do |filter_val|
+              filter_groups.each do |filter_val|
                 return true if member_of_named_group?(member, filter_val)
               end
 
-              # If we get here there was no match.
               false
             end
 
@@ -73,17 +66,26 @@ module Entitlements
             # group_ref - Optionally a string with a reference to a group to look up
             #
             # Returns true if a member of the group, false otherwise.
-            Contract Entitlements::Models::Person, String => C::Bool
             def member_of_named_group?(member, group_ref)
               Entitlements.cache[:member_of_named_group] ||= {}
               Entitlements.cache[:member_of_named_group][group_ref] ||= begin
                 member_set = Entitlements::Data::Groups::Calculated::Rules::Group.matches(
                   value: group_ref,
                 )
-                member_set.map { |person| person.uid.downcase }
+                member_set.each_with_object(Set.new) { |person, result| result.add(person.uid.downcase) }
               end
 
               Entitlements.cache[:member_of_named_group][group_ref].include?(member.uid.downcase)
+            end
+
+            def filter_usernames
+              @filter_usernames ||= filter.each_with_object(Set.new) do |filter_val, result|
+                result.add(filter_val.downcase) unless filter_val.include?("/")
+              end
+            end
+
+            def filter_groups
+              @filter_groups ||= filter.select { |filter_val| filter_val.include?("/") }
             end
           end
         end

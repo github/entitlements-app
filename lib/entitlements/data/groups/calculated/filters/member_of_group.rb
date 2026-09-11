@@ -17,7 +17,6 @@ module Entitlements
             # member - Entitlements::Models::Person object
             #
             # Returns true if the person is to be filtered out, false otherwise.
-            Contract Entitlements::Models::Person => C::Bool
             def filtered?(member)
               return false if filter == :all
               return false unless member_of_named_group?(member, config.fetch("group"))

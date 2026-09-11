@@ -50,6 +50,19 @@ describe Entitlements::Data::Groups::Calculated do
       expect(simple1.members.map { |i| i.uid }).to include(ragamuffin)
     end
 
+    it "caches file objects by their path without an extension" do
+      allow(Entitlements::Util::Util).to receive(:path_for_group).with(ou_key)
+        .and_return(fixture("ldap-config/#{ou_key}"))
+
+      described_class.read_all(ou_key, cfg_obj)
+
+      expect(cache[:file_objects].keys).to all(satisfy { |filename| File.extname(filename).empty? })
+      expect(cache[:file_objects].keys).to contain_exactly(
+        fixture("ldap-config/simple/simple1"),
+        fixture("ldap-config/simple/simple2")
+      )
+    end
+
     it "skips over a subdirectory in the main OU" do
       allow(Entitlements::Util::Util).to receive(:path_for_group).with("nested_ou")
         .and_return(fixture("ldap-config/nested_ou"))

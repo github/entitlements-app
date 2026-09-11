@@ -109,6 +109,33 @@ describe Entitlements::Data::Groups::Calculated::Base do
     end
   end
 
+  describe "#advanced_filters - included and excluded paths" do
+    let(:file) { fixture("ldap-config/filters/included-path-filters.yaml") }
+    let(:obj) { Entitlements::Data::Groups::Calculated::YAML.new(filename: file, config: config) }
+    let(:config) { { "base" => "ou=Felines,ou=Groups,dc=kittens,dc=net" } }
+
+    it "checks each member once when both path rules select the file" do
+      filter_cfg = {
+        class: Entitlements::Data::Groups::Calculated::Filters::MemberOfGroup,
+        config: {
+          "group" => "internal/workday/on-leave",
+          "included_paths" => ["ldap-config/filters"],
+          "excluded_paths" => ["fake-path/is-fake"]
+        }
+      }
+      Entitlements::Data::Groups::Calculated.register_filter("included-paths", filter_cfg)
+      russianblue = people_obj.read["russianblue"]
+      blackmanx = people_obj.read["blackmanx"]
+
+      filter = instance_double(Entitlements::Data::Groups::Calculated::Filters::MemberOfGroup)
+      expect(Entitlements::Data::Groups::Calculated::Filters::MemberOfGroup).to receive(:new).and_return(filter)
+      expect(filter).to receive(:filtered?).with(russianblue).once.and_return(false)
+      expect(filter).to receive(:filtered?).with(blackmanx).once.and_return(false)
+
+      expect(obj.filtered_members).to eq(Set.new([blackmanx, russianblue]))
+    end
+  end
+
   describe "#modified_members" do
     before(:each) do
       allow_any_instance_of(described_class).to receive(:modifiers_constant).and_return(%w[expiration])
