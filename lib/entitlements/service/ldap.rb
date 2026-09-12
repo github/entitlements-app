@@ -17,9 +17,9 @@ module Entitlements
       # This keeps the schema happy.
       attr_reader :binddn, :person_dn_format
 
-      # Constructor-like object that ensures only one LDAP object (and hence connection)
-      # is made for a given LDAP server, for efficiency sake. Takes the same parameters as
-      # the constructor and returns the same object type.
+      # Constructor-like object that ensures only one LDAP service object is made for a
+      # given LDAP server. Takes the same parameters as the constructor and returns the
+      # same object type.
       #
       # addr   - URL of LDAP server e.g. ldaps://ldap.example.net:636
       # binddn - DN to bind with
@@ -80,6 +80,8 @@ module Entitlements
         @ca_file = ca_file
         @disable_ssl_verification = disable_ssl_verification
         @person_dn_format = person_dn_format
+        @known_existing_dns = {}
+        @known_existing_dns_mutex = Mutex.new
       end
 
       # Read a single entry identified by its DN and return the value. Returns nil if
@@ -119,7 +121,13 @@ module Entitlements
         downcased_attrs = attrs == "*" ? "*" : attrs.map { |a| a.downcase }
 
         result = {}
-        ldap.search(base: base, filter: filter, attributes: downcased_attrs, scope: scope, return_result: false) do |entry|
+        search_succeeded = ldap.search(
+          base: base,
+          filter: filter,
+          attributes: downcased_attrs,
+          scope: scope,
+          return_result: false
+        ) do |entry|
           result_key = index == :dn ? entry.dn : entry[index]
           unless result_key
             raise EntryError, "#{entry.dn} has no value for #{index.inspect}"
@@ -132,6 +140,7 @@ module Entitlements
 
           result[result_key] = entry
         end
+        remember_existing_dn(base) if search_succeeded
 
         Entitlements.logger.debug "Completed search: #{result.keys.size} result(s)"
 
@@ -145,6 +154,7 @@ module Entitlements
       # Returns true if the entry exists, false otherwise.
       Contract String => C::Bool
       def exists?(dn)
+        return true if known_existing_dn?(dn)
         read(dn).is_a?(Net::LDAP::Entry)
       end
 
@@ -215,11 +225,19 @@ module Entitlements
 
       attr_reader :addr, :bindpw
 
-      # The LDAP object is initialized and bound on demand the first time it's called.
+      def known_existing_dn?(dn)
+        @known_existing_dns_mutex.synchronize { @known_existing_dns.key?(dn) }
+      end
+
+      def remember_existing_dn(dn)
+        @known_existing_dns_mutex.synchronize { @known_existing_dns[dn] = true }
+      end
+
+      # The LDAP object is initialized and its credentials are validated on demand.
       #
       # Takes no arguments.
       #
-      # Returns a Net::LDAP object that is connected and bound.
+      # Returns a Net::LDAP object configured to connect and bind for each operation.
       Contract C::None => Net::LDAP
       def ldap
         @ldap ||= begin
