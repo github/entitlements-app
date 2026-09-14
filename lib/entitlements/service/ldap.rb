@@ -190,7 +190,10 @@ module Entitlements
 
         ldap.delete(dn: dn)
         operation_result = ldap.get_operation_result
-        return true if operation_result["code"] == 0
+        if operation_result["code"] == 0
+          forget_dn(dn)
+          return true
+        end
         Entitlements.logger.error "Error deleting #{dn}: #{operation_result['message']}"
         false
       end
@@ -231,6 +234,11 @@ module Entitlements
 
       def remember_existing_dn(dn)
         @known_existing_dns_mutex.synchronize { @known_existing_dns[dn] = true }
+      end
+
+      def forget_dn(dn)
+        @known_existing_dns_mutex.synchronize { @known_existing_dns.delete(dn) }
+        @dn_cache&.delete(dn)
       end
 
       # The LDAP object is initialized and its credentials are validated on demand.

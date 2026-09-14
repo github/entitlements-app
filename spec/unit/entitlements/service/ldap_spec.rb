@@ -395,6 +395,44 @@ describe Entitlements::Service::LDAP do
       expect(subject.delete(dn)).to eq(true)
     end
 
+    it "invalidates cached existence and reads after a successful delete" do
+      operation_result = { "code" => 0, "message" => ":tada:" }
+      allow(subject).to receive(:ldap).and_return(ldap)
+      allow(existing).to receive(:dn).and_return(dn)
+
+      expect(ldap).to receive(:search)
+        .with(
+          base: dn,
+          filter: nil,
+          attributes: "*",
+          scope: Net::LDAP::SearchScope_WholeSubtree,
+          return_result: false
+        ).and_return(true)
+      expect(ldap).to receive(:search)
+        .with(
+          base: dn,
+          filter: nil,
+          attributes: "*",
+          scope: Net::LDAP::SearchScope_BaseObject,
+          return_result: false
+        ).and_yield(existing).and_return(true)
+      expect(ldap).to receive(:delete).with(dn: dn)
+      expect(ldap).to receive(:get_operation_result).and_return(operation_result)
+      expect(ldap).to receive(:search)
+        .with(
+          base: dn,
+          filter: nil,
+          attributes: "*",
+          scope: Net::LDAP::SearchScope_BaseObject,
+          return_result: false
+        ).and_return(false)
+
+      expect(subject.search(base: dn)).to eq({})
+      expect(subject.read(dn)).to eq(existing)
+      expect(subject.delete(dn)).to eq(true)
+      expect(subject.exists?(dn)).to eq(false)
+    end
+
     it "returns false when the call fails" do
       operation_result = { "code" => 1, "message" => ":crying_cat_face:" }
       allow(subject).to receive(:ldap).and_return(ldap)
