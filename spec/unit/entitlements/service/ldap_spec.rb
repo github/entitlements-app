@@ -296,7 +296,7 @@ describe Entitlements::Service::LDAP do
   end
 
   describe "#exists?" do
-    it "returns false if the entry does not exist" do
+    it "returns true if the entry exists" do
       allow(entry1).to receive(:dn).and_return(dn1)
       expect(subject).to receive(:ldap).and_return(ldap)
       expect(ldap).to receive(:search)
@@ -306,11 +306,49 @@ describe Entitlements::Service::LDAP do
 
     end
 
-    it "returns true if the entry exists" do
+    it "returns false if the entry does not exist" do
       allow(entry1).to receive(:dn).and_return(dn1)
       expect(subject).to receive(:ldap).and_return(ldap)
       expect(ldap).to receive(:search)
         .with(base: dn1, filter: nil, attributes: "*", scope: Net::LDAP::SearchScope_BaseObject, return_result: false)
+      expect(subject.exists?(dn1)).to eq(false)
+    end
+
+    it "reuses the known existence of a successfully searched base" do
+      expect(subject).to receive(:ldap).and_return(ldap)
+      expect(ldap).to receive(:search)
+        .with(
+          base: dn1,
+          filter: nil,
+          attributes: "*",
+          scope: Net::LDAP::SearchScope_WholeSubtree,
+          return_result: false
+        ).and_return(true)
+
+      expect(subject.search(base: dn1)).to eq({})
+      expect(subject.exists?(dn1)).to eq(true)
+    end
+
+    it "does not remember the base of a failed search" do
+      expect(subject).to receive(:ldap).twice.and_return(ldap)
+      expect(ldap).to receive(:search)
+        .with(
+          base: dn1,
+          filter: nil,
+          attributes: "*",
+          scope: Net::LDAP::SearchScope_WholeSubtree,
+          return_result: false
+        ).and_return(false)
+      expect(ldap).to receive(:search)
+        .with(
+          base: dn1,
+          filter: nil,
+          attributes: "*",
+          scope: Net::LDAP::SearchScope_BaseObject,
+          return_result: false
+        ).and_return(false)
+
+      expect(subject.search(base: dn1)).to eq({})
       expect(subject.exists?(dn1)).to eq(false)
     end
   end
@@ -355,6 +393,44 @@ describe Entitlements::Service::LDAP do
       expect(ldap).to receive(:delete).with(dn: dn)
       expect(ldap).to receive(:get_operation_result).and_return(operation_result)
       expect(subject.delete(dn)).to eq(true)
+    end
+
+    it "invalidates cached existence and reads after a successful delete" do
+      operation_result = { "code" => 0, "message" => ":tada:" }
+      allow(subject).to receive(:ldap).and_return(ldap)
+      allow(existing).to receive(:dn).and_return(dn)
+
+      expect(ldap).to receive(:search)
+        .with(
+          base: dn,
+          filter: nil,
+          attributes: "*",
+          scope: Net::LDAP::SearchScope_WholeSubtree,
+          return_result: false
+        ).and_return(true)
+      expect(ldap).to receive(:search)
+        .with(
+          base: dn,
+          filter: nil,
+          attributes: "*",
+          scope: Net::LDAP::SearchScope_BaseObject,
+          return_result: false
+        ).and_yield(existing).and_return(true)
+      expect(ldap).to receive(:delete).with(dn: dn)
+      expect(ldap).to receive(:get_operation_result).and_return(operation_result)
+      expect(ldap).to receive(:search)
+        .with(
+          base: dn,
+          filter: nil,
+          attributes: "*",
+          scope: Net::LDAP::SearchScope_BaseObject,
+          return_result: false
+        ).and_return(false)
+
+      expect(subject.search(base: dn)).to eq({})
+      expect(subject.read(dn)).to eq(existing)
+      expect(subject.delete(dn)).to eq(true)
+      expect(subject.exists?(dn)).to eq(false)
     end
 
     it "returns false when the call fails" do
