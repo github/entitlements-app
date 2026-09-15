@@ -1,0 +1,23 @@
+---
+configuration_path: ./groups
+people:
+  original:
+    type: yaml
+    config:
+      filename: unavailable.yaml
+people_data_source: original
+filters:
+  dynamic_members:
+    class: Entitlements::Data::Groups::Calculated::Filters::MemberOfGroup
+    config:
+      group: teams/dynamic
+      included_paths:
+        - filtered.txt
+groups:
+  teams:
+    type: dummy
+    base: ou=Teams,dc=example,dc=com
+  teams_mirror:
+    type: dummy
+    base: ou=TeamsMirror,dc=example,dc=com
+    mirror: teams

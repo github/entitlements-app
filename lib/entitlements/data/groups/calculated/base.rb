@@ -39,7 +39,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns Set[Entitlements::Models::Person] of all matching members.
-          Contract C::None => C::SetOf[Entitlements::Models::Person]
           def members
             # :nocov:
             raise "Must be implemented in child class"
@@ -51,7 +50,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a String.
-          Contract C::None => String
           def description
             # :nocov:
             raise "Must be implemented in child class"
@@ -64,7 +62,6 @@ module Entitlements
           #
           # Returns Hash[<String>key => <Object>value]
           # :nocov:
-          Contract C::None => C::HashOf[String => C::Any]
           def modifiers
             {}
           end
@@ -78,11 +75,6 @@ module Entitlements
           #
           # filename - Filename with the ruleset.
           # options  - An optional hash of additional options.
-          Contract C::KeywordArgs[
-            filename: String,
-            config: C::Maybe[C::HashOf[String => C::Any]],
-            options: C::Optional[C::HashOf[Symbol => C::Any]]
-          ] => C::Any
           def initialize(filename:, config: nil, options: {})
             @filename = filename
             @config = config
@@ -96,7 +88,6 @@ module Entitlements
           # message - String with the message to log and raise.
           #
           # Returns nothing.
-          Contract String => C::None
           def fatal_message(message)
             Entitlements.logger.fatal(message)
             raise RuntimeError, message
@@ -107,7 +98,6 @@ module Entitlements
           # members_in - Optionally a set of Entitlements::Models::Person with the currently calculated member set.
           #
           # Returns Set[Entitlements::Models::Person] of all matching members.
-          Contract C::None => C::Or[:calculating, C::SetOf[Entitlements::Models::Person]]
           def filtered_members
             return :calculating if members == :calculating
 
@@ -117,28 +107,11 @@ module Entitlements
               result = members.dup
               filters.reject { |_, filter_val| filter_val == :all }.each do |filter_name, filter_val|
                 filter_cfg = Entitlements::Data::Groups::Calculated.filters_index[filter_name]
+                next unless filter_applies?(filter_cfg.fetch(:config, {}))
+
                 clazz = filter_cfg.fetch(:class)
-                obj = clazz.new(filter: filter_val, config: filter_cfg.fetch(:config, {}))
-                # If excluded_paths is set, ignore any of those excluded paths
-                unless filter_cfg[:config]["excluded_paths"].nil?
-                  # if the filename is not in any of the excluded paths, filter it
-                  unless filter_cfg[:config]["excluded_paths"].any? { |excluded_path| filename.include?(excluded_path) }
-                    result.reject! { |member| obj.filtered?(member) }
-                  end
-                end
-
-                # if included_paths is set, filter only files at those included paths
-                unless filter_cfg[:config]["included_paths"].nil?
-                  # if the filename is in any of the included paths, filter it
-                  if filter_cfg[:config]["included_paths"].any? { |included_path| filename.include?(included_path) }
-                    result.reject! { |member| obj.filtered?(member) }
-                  end
-                end
-
-                # if neither included_paths nor excluded_paths are set, filter normally
-                if filter_cfg[:config]["included_paths"].nil? and filter_cfg[:config]["excluded_paths"].nil?
-                  result.reject! { |member| obj.filtered?(member) }
-                end
+                obj = clazz.new(filter: filter_val, config: filter_cfg.fetch(:config, {}), options: options)
+                result.reject! { |member| obj.filtered?(member) }
               end
               result
             end
@@ -149,7 +122,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns Set[Entitlements::Models::Person] of all matching members.
-          Contract C::None => C::Or[:calculating, C::SetOf[Entitlements::Models::Person]]
           def modified_members
             return :calculating if members == :calculating
             @modified_members ||= apply_modifiers(members)
@@ -160,7 +132,6 @@ module Entitlements
           # members_in - Optionally a set of Entitlements::Models::Person with the currently calculated member set.
           #
           # Returns Set[Entitlements::Models::Person] of all matching members.
-          Contract C::None => C::Or[:calculating, C::SetOf[Entitlements::Models::Person]]
           def modified_filtered_members
             return :calculating if filtered_members == :calculating
             @modified_filtered_members ||= apply_modifiers(filtered_members)
@@ -170,13 +141,23 @@ module Entitlements
 
           attr_reader :config, :options
 
+          def filter_applies?(filter_config)
+            included_paths = filter_config["included_paths"]
+            excluded_paths = filter_config["excluded_paths"]
+
+            return true if included_paths.nil? && excluded_paths.nil?
+            return true if included_paths&.any? { |included_path| filename.include?(included_path) }
+            return true if excluded_paths&.none? { |excluded_path| filename.include?(excluded_path) }
+
+            false
+          end
+
           # Common method that takes a given list of members and applies the modifiers.
           # Used to calculated `modified_members` and `modified_filtered_members`.
           #
           # member_set - Set of Entitlements::Models::Person
           #
           # Returns a set of Entitlements::Models::Person
-          Contract C::SetOf[Entitlements::Models::Person] => C::SetOf[Entitlements::Models::Person]
           def apply_modifiers(member_set)
             result = member_set.dup
 
@@ -211,13 +192,12 @@ module Entitlements
           # context    - A String (usually a filename) to provide context if there's an error.
           #
           # Returns true if expired, false if not expired.
-          Contract C::Or[nil, String], String => C::Or[nil, C::Bool]
           def expired?(expiration, context)
             return false if Entitlements.config.fetch("ignore_expirations", false)
             return false if expiration.nil? || expiration.strip.empty?
             if expiration =~ /\A(\d{4})-(\d{2})-(\d{2})\z/
               year, month, day = Regexp.last_match(1).to_i, Regexp.last_match(2).to_i, Regexp.last_match(3).to_i
-              return Time.utc(year, month, day, 0, 0, 0) <= Time.now.utc
+              return Time.utc(year, month, day, 0, 0, 0) <= Entitlements.evaluation_time.utc
             end
             message = "Invalid expiration date #{expiration.inspect} in #{context} (expected format: YYYY-MM-DD)"
             raise ArgumentError, message
@@ -228,7 +208,6 @@ module Entitlements
           # rule - A Hash of rules (see "rules" stub below).
           #
           # Returns Set[Entitlements::Models::Person].
-          Contract C::HashOf[String => C::Any] => C::Or[:calculating, C::SetOf[Entitlements::Models::Person]]
           def members_from_rules(rule)
             Entitlements.cache[:calculated] ||= {}
             Entitlements.cache[:calculated][rou] ||= {}
@@ -264,7 +243,6 @@ module Entitlements
           # rule - A Hash of rules (see "rules" stub below).
           #
           # Returns Set[Entitlements::Models::Person].
-          Contract C::HashOf[String => C::Any] => C::SetOf[Entitlements::Models::Person]
           def _members_from_rules(rule)
             # Empty rule => error.
             if rule.keys.empty?
@@ -308,7 +286,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a Hash.
-          Contract C::None => C::HashOf[String => C::Any]
           def rules
             # :nocov:
             raise "Must be implemented in child class"
@@ -340,7 +317,7 @@ module Entitlements
           # Returns C::SetOf[Entitlements::Models::Person] from a recursive call.
           def handle_and(rule)
             ensure_type!("and", rule, Array)
-            return result unless rule.any?
+            return Set.new unless rule.any?
 
             first_rule = rule.shift
             ensure_type!("and", first_rule, Hash)
@@ -377,7 +354,6 @@ module Entitlements
           # type     - The type.
           #
           # Returns nothing, but raises an error if the type doesn't match.
-          Contract String, C::Any, C::Any => nil
           def ensure_type!(function, obj, type)
             return if obj.is_a?(type)
             raise "Invalid type: in #{filename}, expected #{function.inspect} to be a #{type} but got #{obj.inspect}!"
@@ -388,7 +364,6 @@ module Entitlements
           # str - The string that needs to be converted to CamelCase.
           #
           # Returns a String in CamelCase.
-          Contract String => String
           def camelize(str)
             Entitlements::Util::Util.camelize(str)
           end
@@ -398,7 +373,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a String with the name of the ou.
-          Contract C::None => String
           def ou
             File.basename(File.dirname(filename))
           end
@@ -408,7 +382,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a String with the name of the ou.
-          Contract C::None => String
           def rou
             File.expand_path(File.dirname(filename)).gsub("#{Entitlements.config_path}/", "").gsub(/^\//, "").gsub(/\//, "/")
           end
@@ -418,7 +391,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a String with the name of the cn.
-          Contract C::None => String
           def cn
             File.basename(filename).sub(/\.[^\.]+\z/, "")
           end
@@ -430,7 +402,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a Set with the permitted methods.
-          Contract C::None => C::SetOf[String]
           def allowed_methods
             @allowed_methods ||= begin
               if config.is_a?(Hash) && config["allowed_methods"]
@@ -451,7 +422,6 @@ module Entitlements
           # function_in - String with the function name from the definition.
           #
           # Returns the underlying function name if aliased, or else what was entered.
-          Contract String => String
           def function_for(function_in)
             ALIAS_METHODS[function_in] || function_in
           end
@@ -462,7 +432,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns an Set of Strings with allowed methods.
-          Contract C::None => C::SetOf[String]
           def whitelisted_methods
             Set.new(Entitlements::Data::Groups::Calculated.rules_index.keys)
           end

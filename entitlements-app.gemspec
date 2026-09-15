@@ -10,9 +10,9 @@ Gem::Specification.new do |s|
   s.authors = ["GitHub, Inc. Security Ops"]
   s.email = "opensource+entitlements-app@github.com"
   s.license = "MIT"
-  s.files = Dir.glob("lib/**/*") + %w[bin/deploy-entitlements]
+  s.files = Dir.glob("lib/**/*") + %w[bin/deploy-entitlements bin/entitlements-smart-diff]
   s.homepage = "https://github.com/github/entitlements-app"
-  s.executables = %w[deploy-entitlements]
+  s.executables = %w[deploy-entitlements entitlements-smart-diff]
 
   s.required_ruby_version = ">= 3.0.0"
 

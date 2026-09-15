@@ -95,6 +95,24 @@ describe Entitlements::Data::Groups::Calculated::Rules::Group do
         answer_set = Set.new(result.map { |name| people_obj.read[name] })
         expect(obj.members).to eq(answer_set)
       end
+
+      it "reuses recursively created file objects during top-level calculation" do
+        Entitlements.config_file = fixture("config.yaml")
+        path = fixture("ldap-config/nested_groups")
+        allow(Entitlements::Util::Util).to receive(:path_for_group).with("nested_groups").and_return(path)
+
+        obj.members
+        recursively_created = cache[:file_objects].dup
+        Entitlements::Data::Groups::Calculated.read_all(
+          "nested_groups",
+          { "base" => "ou=Nested,ou=Groups,dc=kittens,dc=net" }
+        )
+
+        recursively_created.each do |key, value|
+          expect(cache[:file_objects][key]).to equal(value)
+        end
+        expect(cache[:file_objects].keys).to all(satisfy { |filename| File.extname(filename).empty? })
+      end
     end
 
     context "for a wildcard group that does not self-reference" do

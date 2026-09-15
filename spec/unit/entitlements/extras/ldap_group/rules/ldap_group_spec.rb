@@ -21,6 +21,22 @@ describe Entitlements::Extras::LDAPGroup::Rules::LDAPGroup do
   let(:members) { %w[NEBELUNg russianblue oJosazuLEs].map { |uid| people_obj.read(uid) } }
 
   describe "#matches" do
+    context "during a desired-groups export" do
+      let(:people) do
+        {
+          "member" => Entitlements::Models::Person.new(uid: "member", attributes: {"shellentitlements" => [dn]}),
+          "other" => Entitlements::Models::Person.new(uid: "other", attributes: {})
+        }
+      end
+      let(:people_obj) { Entitlements::Data::People::YAML.new(filename: fixture("people.yaml"), people: people) }
+      let(:cache) { { people_obj: people_obj, desired_groups_export: true } }
+
+      it "uses frozen person attributes instead of LDAP" do
+        expect(described_class).not_to receive(:ldap)
+        expect(obj.members.map(&:uid)).to eq(["member"])
+      end
+    end
+
     context "for a group that was cached" do
       let(:ldap_cache) { { dn => group } }
 

@@ -1,0 +1,26 @@
+---
+configuration_path: ./groups
+people:
+  original:
+    type: yaml
+    config:
+      filename: unavailable.yaml
+people_data_source: original
+filters:
+  contractors:
+    class: Entitlements::Data::Groups::Calculated::Filters::MemberOfGroup
+    config:
+      group: internal/contractors
+groups:
+  internal:
+    type: dummy
+  missing:
+    type: dummy
+    dir: missing
+  teams:
+    type: dummy
+    base: ou=Teams,dc=example,dc=com
+  teams_mirror:
+    type: dummy
+    base: ou=TeamsMirror,dc=example,dc=com
+    mirror: teams

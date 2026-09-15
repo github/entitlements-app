@@ -4,6 +4,7 @@
 # Ignore binstubs but do commit the one specific for this code.
 bin/*
 !bin/deploy-entitlements
+!bin/entitlements-smart-diff
 
 # There's a place for local caching of container gems to make local builds faster.
 # Keep the .keep file but not the gems themselves

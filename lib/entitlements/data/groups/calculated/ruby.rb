@@ -14,7 +14,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a Set[Entitlements::Models::Person] with DN's of the people in the group.
-          Contract C::None => C::SetOf[Entitlements::Models::Person]
           def members
             @members ||= begin
               Entitlements.logger.debug "Calculating members from #{filename}"
@@ -101,7 +100,12 @@ module Entitlements
           Contract C::None => Object
           def rule_obj
             @rule_obj ||= begin
-              require filename
+              constants_before_load = Entitlements.rule_constant_paths
+              begin
+                load filename
+              ensure
+                Entitlements.record_rule_constants(Entitlements.rule_constant_paths - constants_before_load)
+              end
               clazz = Kernel.const_get(ruby_class_name)
               clazz.new
             end
