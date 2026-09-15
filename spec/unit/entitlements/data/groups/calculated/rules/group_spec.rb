@@ -111,7 +111,7 @@ describe Entitlements::Data::Groups::Calculated::Rules::Group do
         recursively_created.each do |key, value|
           expect(cache[:file_objects][key]).to equal(value)
         end
-        expect(cache[:file_objects].keys).to all(satisfy { |filename| File.extname(filename).empty? })
+        expect(cache[:file_objects].keys).to all(satisfy { |filename| !File.extname(filename).empty? })
       end
     end
 

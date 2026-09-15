@@ -8,7 +8,7 @@ describe Entitlements::Data::Groups::Calculated::Filters::MemberOfGroup do
   let(:cache) do
     {
       people_obj: people_obj,
-      file_objects: { fixture("ldap-config/internal/mygroup") => mygroup_obj },
+      file_objects: { fixture("ldap-config/internal/mygroup.txt") => mygroup_obj },
       calculated: { "internal" => { "mygroup" => groupdef } }
     }
   end
@@ -22,6 +22,8 @@ describe Entitlements::Data::Groups::Calculated::Filters::MemberOfGroup do
 
   before(:each) do
     setup_default_filters
+    allow(Entitlements::Data::Groups::Calculated::Rules::Group)
+      .to receive(:files_for).with("internal", options: {}).and_return("mygroup" => "txt")
   end
 
   context "with a :none filter" do

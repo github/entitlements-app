@@ -41,15 +41,6 @@ module Entitlements
                 raise "Error: Circular dependency #{Entitlements.cache[:dependencies].join(' -> ')}"
               end
 
-              # If we have calculated this before, then apply modifiers and return the result. `current_value` here
-              # is a set with the correct answers but that does not take into effect any modifiers. Therefore we
-              # reference back to the object so we can have the modifiers applied. There's a cache in the object that
-              # remembers the value of `.modified_members` each time it's calculated, so this is inexpensive.
-              filebase_with_path = File.join(Entitlements::Util::Util.path_for_group(ou), cn)
-              if Entitlements.cache[:file_objects].key?(filebase_with_path)
-                return Entitlements.cache[:file_objects][filebase_with_path].modified_members
-              end
-
               # We actually need to calculate this group. Find the file based on the ou and cn in the directory.
               files = files_for(ou, options: options)
               match_regex = Regexp.new("\\A" + Regexp.escape(cn.gsub("*", "\f")).gsub("\\f", ".*") + "\\z")
@@ -58,25 +49,26 @@ module Entitlements
                 result = Set.new
                 matching_files.each do |filebase, ext|
                   filebase_with_path = File.join(Entitlements::Util::Util.path_for_group(ou), filebase)
+                  target_filename = "#{filebase_with_path}.#{ext}"
 
                   # If the object has already been calculated then we can just merge the value from
                   # the cache without going any further. Otherwise, create a new object for the group
                   # reference and calculate them.
-                  unless Entitlements.cache[:file_objects][filebase_with_path]
+                  unless Entitlements.cache[:file_objects][target_filename]
                     target_config = Entitlements.config.fetch("groups", {})[ou] || {}
-                    Entitlements.cache[:file_objects][filebase_with_path] = Entitlements::Data::Groups::Calculated.ruleset(
-                      filename: "#{filebase_with_path}.#{ext}",
+                    Entitlements.cache[:file_objects][target_filename] = Entitlements::Data::Groups::Calculated.ruleset(
+                      filename: target_filename,
                       config: target_config,
                       options: options,
                     )
-                    if Entitlements.cache[:file_objects][filebase_with_path].members == :calculating
+                    if Entitlements.cache[:file_objects][target_filename].members == :calculating
                       next if matching_files.size > 1
                       raise "Error: Invalid self-referencing wildcard in #{ou}/#{filebase}.#{ext}"
                     end
                   end
 
-                  unless Entitlements.cache[:file_objects][filebase_with_path].modified_members == :calculating
-                    result.merge Entitlements.cache[:file_objects][filebase_with_path].modified_members
+                  unless Entitlements.cache[:file_objects][target_filename].modified_members == :calculating
+                    result.merge Entitlements.cache[:file_objects][target_filename].modified_members
                   end
                 end
                 return result

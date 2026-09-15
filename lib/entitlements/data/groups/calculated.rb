@@ -96,9 +96,8 @@ module Entitlements
               # Use the ruleset to build the group.
               options = { skip_broken_references: skip_broken_references }
 
-              cache_key = file_object_key(filename)
-              Entitlements.cache[:file_objects][cache_key] ||= ruleset(filename: filename, config: cfg_obj, options: options)
-              file_object = Entitlements.cache[:file_objects][cache_key]
+              Entitlements.cache[:file_objects][filename] ||= ruleset(filename: filename, config: cfg_obj, options: options)
+              file_object = Entitlements.cache[:file_objects][filename]
               @groups_cache[group_dn] = Entitlements::Models::Group.new(
                 dn: group_dn,
                 members: file_object.modified_filtered_members,
@@ -219,10 +218,6 @@ module Entitlements
 
           clazz = Kernel.const_get(FILE_EXTENSIONS[ext])
           clazz.new(filename: filename, config: config, options: options)
-        end
-
-        def self.file_object_key(filename)
-          filename.sub(/\.\w+\z/, "")
         end
 
         #########################
