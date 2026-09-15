@@ -81,18 +81,45 @@ describe Entitlements::DesiredGroups do
     expect { described_class.export(**args) }.to raise_error(ArgumentError, /stable backend identifier/)
   end
 
-  it "can skip dynamic groups and their dependents without reporting them" do
+  it "can export only requested groups and evaluates Ruby dependencies normally" do
     dynamic_args = args.merge(config_file: fixture("dynamic-groups/config.yaml"))
-    expect { described_class.export(**dynamic_args) }
-      .to raise_error(KeyError, /DYNAMIC_GROUP_TOKEN/)
-
-    result = described_class.export(**dynamic_args.merge(skip_dynamic_groups: true))
-    expect(result).not_to have_key("complete")
-    expect(result).not_to have_key("warnings")
+    result = described_class.export(
+      **dynamic_args,
+      entitlement_groups: ["teams/static", "teams_mirror/static"]
+    )
     expect(result["memberships"]).to eq([
       {"backend" => "dummy", "entitlement_group" => "teams/static", "username" => "alice"},
       {"backend" => "dummy", "entitlement_group" => "teams_mirror/static", "username" => "alice"}
     ])
+
+    expect do
+      described_class.export(**dynamic_args, entitlement_groups: ["teams/dynamic"])
+    end.to raise_error(KeyError, /DYNAMIC_GROUP_TOKEN/)
+  end
+
+  it "treats requested groups missing from one tree as empty" do
+    result = described_class.export(**args, entitlement_groups: ["teams/missing"])
+    expect(result["memberships"]).to be_empty
+  end
+
+  it "treats requested groups in missing directories as empty" do
+    allow(Entitlements::Util::Util).to receive(:path_for_group).and_raise(Errno::ENOENT)
+    result = described_class.export(**args, entitlement_groups: ["teams/missing"])
+    expect(result["memberships"]).to be_empty
+  end
+
+  it "rejects multiple files defining the same requested group" do
+    Dir.mktmpdir do |directory|
+      FileUtils.cp_r(Dir.glob(File.join(fixture("smart-diff"), "*")), directory)
+      File.write(File.join(directory, "groups", "teams", "direct.yaml"), "---\nrules: {username: alice}\n")
+
+      expect do
+        described_class.export(
+          **args.merge(config_file: File.join(directory, "config.yaml")),
+          entitlement_groups: ["teams/direct"]
+        )
+      end.to raise_error(ArgumentError, /Multiple entitlement files/)
+    end
   end
 
   it "preserves rule constants that were not loaded from entitlement files" do

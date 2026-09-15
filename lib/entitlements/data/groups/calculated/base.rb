@@ -243,16 +243,7 @@ module Entitlements
             Entitlements.cache[:dependencies] << "#{rou}/#{cn}"
 
             # Actually calculate it.
-            begin
-              Entitlements.cache[:calculated][rou][cn] = _members_from_rules(rule)
-            rescue Entitlements::Data::Groups::Calculated::DynamicGroupError
-              raise unless options[:skip_dynamic_groups]
-
-              Entitlements.cache[:calculated][rou].delete(cn)
-              Entitlements.cache[:dependencies].delete("#{rou}/#{cn}")
-              Entitlements.cache.fetch(:file_objects, {}).delete(filename)
-              raise
-            end
+            Entitlements.cache[:calculated][rou][cn] = _members_from_rules(rule)
 
             # This should be the last item on the dependencies array, so pop it off.
             unless Entitlements.cache[:dependencies].last == "#{rou}/#{cn}"

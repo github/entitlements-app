@@ -71,6 +71,16 @@ describe Entitlements::SmartDiff do
     expect(markdown).to include("| Added | carol | org/team |")
   end
 
+  it "limits comparison to affected groups" do
+    result, = described_class.compare(
+      base: base,
+      head: head,
+      affected_groups: ["teams/same"]
+    )
+    expect(result["counts"]).to eq("gains" => 0, "losses" => 0)
+    expect(result["scope"]).to eq("affected_groups" => ["teams/same"])
+  end
+
   it "runs both exports with identical frozen inputs" do
     common = {
       config_file: fixture("smart-diff/config.yaml"),
