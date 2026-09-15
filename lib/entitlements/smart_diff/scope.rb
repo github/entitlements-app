@@ -14,12 +14,8 @@ module Entitlements
         all_groups = base.fetch(:groups) | head.fetch(:groups)
         changed_groups = changed_groups(base, head)
         reverse_dependencies = reverse_dependencies(base, head, all_groups)
-        dynamic_groups = dependency_closure(
-          base.fetch(:dynamic_groups) | head.fetch(:dynamic_groups),
-          reverse_dependencies
-        )
 
-        (dependency_closure(changed_groups, reverse_dependencies) - dynamic_groups).to_a.sort
+        dependency_closure(changed_groups, reverse_dependencies).to_a.sort
       end
 
       def self.catalog(config_file:, tree:, evaluated_at:)
@@ -35,7 +31,6 @@ module Entitlements
         files = {}
         path_groups = Hash.new { |hash, key| hash[key] = Set.new }
         references = Hash.new { |hash, key| hash[key] = Set.new }
-        dynamic_groups = Set.new
         mirrors = []
 
         groups_config.each do |group_name, group_config|
@@ -59,10 +54,7 @@ module Entitlements
             groups.add(group_id)
             path_groups[relative_path].add(group_id)
             files[relative_path] = Digest::SHA256.file(filename).hexdigest
-            if File.extname(filename) == ".rb"
-              dynamic_groups.add(group_id)
-              next
-            end
+            next if File.extname(filename) == ".rb"
 
             ruleset = Entitlements::Data::Groups::Calculated.ruleset(
               filename: filename,
@@ -78,7 +70,6 @@ module Entitlements
             mirror_group = "#{mirror_name}/#{source_group.delete_prefix("#{source_name}/")}"
             groups.add(mirror_group)
             references[mirror_group].add(source_group)
-            dynamic_groups.add(mirror_group) if dynamic_groups.include?(source_group)
           end
         end
 
@@ -87,8 +78,7 @@ module Entitlements
           files: files,
           groups: groups,
           path_groups: path_groups,
-          references: references,
-          dynamic_groups: dynamic_groups
+          references: references
         }
       ensure
         Entitlements.reset!
@@ -121,6 +111,9 @@ module Entitlements
           next unless filter_applies?(filename, filter.fetch(:config))
 
           result.add(filter.fetch(:config).fetch("group"))
+          Array(filter_value).select { |value| value.is_a?(String) && value.include?("/") }.each do |value|
+            result.add(value)
+          end
         end
       end
       private_class_method :collect_filter_references

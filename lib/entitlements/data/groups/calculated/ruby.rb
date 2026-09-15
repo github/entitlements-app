@@ -101,11 +101,6 @@ module Entitlements
           Contract C::None => Object
           def rule_obj
             @rule_obj ||= begin
-              if options[:skip_dynamic_groups]
-                raise Entitlements::Data::Groups::Calculated::DynamicGroupError,
-                      "Dynamic group #{rou}/#{cn} uses arbitrary Ruby code"
-              end
-
               constants_before_load = Entitlements.rule_constant_paths
               begin
                 load filename

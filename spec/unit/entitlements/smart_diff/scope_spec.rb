@@ -91,7 +91,7 @@ describe Entitlements::SmartDiff::Scope do
     })).to be true
   end
 
-  it "omits dynamic groups and all groups that depend on them" do
+  it "includes changed dynamic groups and all groups that depend on them" do
     Dir.mktmpdir do |base|
       Dir.mktmpdir do |head|
         [base, head].each do |tree|
@@ -107,7 +107,44 @@ describe Entitlements::SmartDiff::Scope do
           base_tree: base,
           head_tree: head,
           evaluated_at: "2026-09-02T19:58:54Z"
-        )).to eq([])
+        )).to eq([
+          "teams/dependent",
+          "teams/dynamic",
+          "teams/filtered",
+          "teams_mirror/dependent",
+          "teams_mirror/dynamic",
+          "teams_mirror/filtered"
+        ])
+      end
+    end
+  end
+
+  it "includes groups referenced by per-file filter values" do
+    Dir.mktmpdir do |base|
+      Dir.mktmpdir do |head|
+        copy_fixture(base)
+        copy_fixture(head)
+        [base, head].each do |tree|
+          File.write(
+            File.join(tree, "groups", "teams", "filter-target.txt"),
+            "username = contractor\n"
+          )
+          File.write(
+            File.join(tree, "groups", "teams", "filter-dependent.txt"),
+            "username = contractor\nfilter_contractors = teams/filter-target\n"
+          )
+        end
+        File.open(File.join(head, "groups", "teams", "filter-target.txt"), "a") do |file|
+          file.puts "username = alice"
+        end
+
+        expect(described_class.affected_groups(
+          base_config: File.join(base, "config.yaml"),
+          head_config: File.join(head, "config.yaml"),
+          base_tree: base,
+          head_tree: head,
+          evaluated_at: "2026-09-02T19:58:54Z"
+        )).to include("teams/filter-dependent")
       end
     end
   end

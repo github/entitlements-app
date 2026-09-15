@@ -27,14 +27,14 @@ module Entitlements
         config_file: base_config,
         source_sha: base_sha,
         tree_root: base_tree,
-        skip_dynamic_groups: true,
+        entitlement_groups: affected_groups,
         **common
       )
       head = Entitlements::DesiredGroups.export(
         config_file: head_config,
         source_sha: head_sha,
         tree_root: head_tree,
-        skip_dynamic_groups: true,
+        entitlement_groups: affected_groups,
         **common
       )
       compare(base: base, head: head, markdown_limit: markdown_limit, affected_groups: affected_groups)

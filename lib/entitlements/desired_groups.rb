@@ -7,7 +7,7 @@ module Entitlements
   class DesiredGroups
     SCHEMA_VERSION = 1
 
-    def self.export(config_file:, source_sha:, people_source:, evaluated_at:, tree_root: nil, skip_dynamic_groups: false)
+    def self.export(config_file:, source_sha:, people_source:, evaluated_at:, tree_root: nil, entitlement_groups: nil)
       validate_inputs!(
         config_file: config_file,
         source_sha: source_sha,
@@ -31,7 +31,7 @@ module Entitlements
       Entitlements.cache[:desired_groups_export] = true
       Entitlements.register_filters if Entitlements.config.key?("filters")
 
-      memberships = export_memberships(backend_identifiers, skip_dynamic_groups: skip_dynamic_groups)
+      memberships = export_memberships(backend_identifiers, entitlement_groups: entitlement_groups)
       {
         "schema_version" => SCHEMA_VERSION,
         "source_sha" => source_sha.downcase,
@@ -90,28 +90,86 @@ module Entitlements
     end
     private_class_method :use_people_snapshot!
 
-    def self.export_memberships(backend_identifiers, skip_dynamic_groups:)
+    def self.export_memberships(backend_identifiers, entitlement_groups:)
+      return export_all_memberships(backend_identifiers) unless entitlement_groups
+
+      records = {}
+      entitlement_groups.sort.each do |entitlement_group|
+        group_name = configured_group_name(entitlement_group)
+        next unless group_name
+
+        username_records(
+          backend: backend_identifiers.fetch(group_name),
+          entitlement_group: entitlement_group,
+          members: members_for(entitlement_group, group_name)
+        ).each do |record|
+          records[record.values_at("backend", "entitlement_group", "username")] = record
+        end
+      end
+      records.values.sort_by { |record| record.values_at("backend", "entitlement_group", "username") }
+    end
+    private_class_method :export_memberships
+
+    def self.export_all_memberships(backend_identifiers)
       records = {}
       exportable_groups.each do |group_name, group_config|
-        Entitlements::Data::Groups::Calculated.read_all(
-          group_name,
-          group_config,
-          skip_dynamic_groups: skip_dynamic_groups
-        ).each do |group_dn|
+        Entitlements::Data::Groups::Calculated.read_all(group_name, group_config).each do |group_dn|
           group = Entitlements::Data::Groups::Calculated.read(group_dn)
-          group.member_strings.each do |username|
-            record = {
-              "backend" => backend_identifiers.fetch(group_name),
-              "entitlement_group" => "#{group_name}/#{group.cn}",
-              "username" => username.downcase
-            }
+          username_records(
+            backend: backend_identifiers.fetch(group_name),
+            entitlement_group: "#{group_name}/#{group.cn}",
+            members: group.members
+          ).each do |record|
             records[record.values_at("backend", "entitlement_group", "username")] = record
           end
         end
       end
       records.values.sort_by { |record| record.values_at("backend", "entitlement_group", "username") }
     end
-    private_class_method :export_memberships
+    private_class_method :export_all_memberships
+
+    def self.configured_group_name(entitlement_group)
+      Entitlements.config.fetch("groups").keys.select do |group_name|
+        entitlement_group.start_with?("#{group_name}/")
+      end.max_by(&:length)
+    end
+    private_class_method :configured_group_name
+
+    def self.members_for(entitlement_group, group_name)
+      group_config = Entitlements.config.fetch("groups").fetch(group_name)
+      cn = entitlement_group.delete_prefix("#{group_name}/")
+      if group_config["mirror"]
+        return members_for("#{group_config.fetch('mirror')}/#{cn}", group_config.fetch("mirror"))
+      end
+
+      group_path = Entitlements::Util::Util.path_for_group(group_name)
+      filenames = %w[rb txt yaml].filter_map do |extension|
+        filename = File.join(group_path, "#{cn}.#{extension}")
+        filename if File.file?(filename)
+      end
+      return Set.new if filenames.empty?
+      raise ArgumentError, "Multiple entitlement files found for #{entitlement_group}" if filenames.length > 1
+
+      ruleset = Entitlements::Data::Groups::Calculated.ruleset(
+        filename: filenames.first,
+        config: group_config
+      )
+      ruleset.modified_filtered_members
+    rescue Errno::ENOENT
+      Set.new
+    end
+    private_class_method :members_for
+
+    def self.username_records(backend:, entitlement_group:, members:)
+      members.map do |member|
+        {
+          "backend" => backend,
+          "entitlement_group" => entitlement_group,
+          "username" => member.uid.downcase
+        }
+      end
+    end
+    private_class_method :username_records
 
     def self.exportable_groups
       Entitlements.config.fetch("groups").select { |_name, config| config.key?("base") }.sort_by do |group_name, config|
