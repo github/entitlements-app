@@ -28,7 +28,6 @@ module Entitlements
         # manager - Entitlements::Models::Person who is the manager or higher
         #
         # Returns a Set of Entitlements::Models::Person's.
-        Contract Entitlements::Models::Person => C::SetOf[Entitlements::Models::Person]
         def direct_reports(manager)
           manager_uid = manager.uid.downcase
           direct_reports_cache.key?(manager_uid) ? direct_reports_cache[manager_uid] : Set.new
@@ -41,7 +40,6 @@ module Entitlements
         # manager - Entitlements::Models::Person who is the manager or higher
         #
         # Returns a Set of LDAP object Entitlements::Models::Persons.
-        Contract Entitlements::Models::Person => C::SetOf[Entitlements::Models::Person]
         def all_reports(manager)
           manager_uid = manager.uid.downcase
           all_reports_cache.key?(manager_uid) ? all_reports_cache[manager_uid] : Set.new
@@ -53,7 +51,6 @@ module Entitlements
         # person - Entitlements::Models::Person object
         #
         # Returns a Set of LDAP object openstructs.
-        Contract Entitlements::Models::Person => C::SetOf[Entitlements::Models::Person]
         def management_chain(person)
           person_uid = person.uid.downcase
 
@@ -84,7 +81,6 @@ module Entitlements
         # manager. Cache this so that the iteration only occurs one time.
         #
         # Returns a Hash of { "dn" => Set(Entitlements::Models::Person) }
-        Contract C::None => C::HashOf[String => C::SetOf[Entitlements::Models::Person]]
         def direct_reports_cache
           return @direct_reports_cache if @direct_reports_cache
 
@@ -111,7 +107,6 @@ module Entitlements
         # manager. Cache this so that the iteration only occurs one time.
         #
         # Returns a Hash of { "dn" => Set(Entitlements::Models::Person) }
-        Contract C::None => C::HashOf[String => C::SetOf[Entitlements::Models::Person]]
         def all_reports_cache
           return @all_reports_cache if @all_reports_cache
 

@@ -16,11 +16,6 @@ module Entitlements
           # options  - Optional hash of additional method-specific options
           #
           # Returns a Set[Entitlements::Models::Person].
-          Contract C::KeywordArgs[
-            value: String,
-            filename: C::Maybe[String],
-            options: C::Optional[C::HashOf[Symbol => C::Any]]
-          ] => C::SetOf[Entitlements::Models::Person]
           def self.matches(value:, filename: nil, options: {})
             Entitlements.cache[:ldap_cache] ||= {}
             Entitlements.cache[:ldap_cache][value] ||= begin

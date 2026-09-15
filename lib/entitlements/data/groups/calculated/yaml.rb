@@ -16,7 +16,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a Set[String] with DN's of the people in the group.
-          Contract C::None => C::Or[:calculating, C::SetOf[Entitlements::Models::Person]]
           def members
             @members ||= begin
               Entitlements.logger.debug "Calculating members from #{filename}"
@@ -29,7 +28,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a String with the group description, or "" if undefined.
-          Contract C::None => String
           def description
             parsed_data.fetch("description", "")
           end
@@ -41,7 +39,6 @@ module Entitlements
           # Format: namespace/major.minor.patch
           #
           # Returns a String with the schema version (k8s-style), or "entitlements/v1" if undefined.
-          Contract C::None => String
           def schema_version
             schema_version = parsed_data.fetch("schema_version", "entitlements/v1").to_s
 
@@ -62,7 +59,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns Hash[<String>key => <Object>value]
-          Contract C::None => C::HashOf[String => C::Any]
           def modifiers
             parsed_data.select { |k, _v| MODIFIERS.include?(k) }
           end
@@ -74,7 +70,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a Hash[String => :all/:none/List of strings].
-          Contract C::None => C::HashOf[String => C::Or[:all, :none, C::ArrayOf[String]]]
           def initialize_filters
             result = Entitlements::Data::Groups::Calculated.filters_default
             return result unless parsed_data.key?("filters")
@@ -123,7 +118,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns Hash[<String>key => <Object>value]
-          Contract C::None => C::HashOf[String => C::Any]
           def initialize_metadata
             return {} unless parsed_data.key?("metadata")
             result = parsed_data["metadata"]
@@ -146,7 +140,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a Hash.
-          Contract C::None => C::HashOf[String => C::Any]
           def rules
             @rules ||= begin
               rules_hash = parsed_data["rules"]
@@ -162,7 +155,6 @@ module Entitlements
           # rules_hash - Hash of rules.
           #
           # Returns the updated hash that has no expired rules in it.
-          Contract C::HashOf[String => C::Any] => C::HashOf[String => C::Any]
           def remove_expired_rules(rules_hash)
             if rules_hash.keys.size == 1
               if rules_hash.values.first.is_a?(Array)
@@ -183,7 +175,6 @@ module Entitlements
           #
           # Returns a Hash.
           # :nocov:
-          Contract C::None => C::HashOf[String => C::Any]
           def parsed_data
             @parsed_data ||= if RubyVersionCheck.ruby_version2?
                                ::YAML.load(File.read(filename)).to_h
