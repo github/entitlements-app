@@ -25,11 +25,6 @@ module Entitlements
             # options  - Optional hash of additional method-specific options
             #
             # Returns a Set[Entitlements::Models::Person].
-            Contract C::KeywordArgs[
-              value: String,
-              filename: C::Maybe[String],
-              options: C::Optional[C::HashOf[Symbol => C::Any]]
-            ] => C::SetOf[Entitlements::Models::Person]
             def self.matches(value:, filename: nil, options: {})
               # We've asked for a managed group, so we need to calculate that group and return its members.
               # First parse the value into the ou and cn.
@@ -67,9 +62,10 @@ module Entitlements
                   # the cache without going any further. Otherwise, create a new object for the group
                   # reference and calculate them.
                   unless Entitlements.cache[:file_objects][filebase_with_path]
-                    clazz = Kernel.const_get(FILE_EXTENSIONS[ext])
-                    Entitlements.cache[:file_objects][filebase_with_path] = clazz.new(
+                    target_config = Entitlements.config.fetch("groups", {})[ou] || {}
+                    Entitlements.cache[:file_objects][filebase_with_path] = Entitlements::Data::Groups::Calculated.ruleset(
                       filename: "#{filebase_with_path}.#{ext}",
+                      config: target_config,
                       options: options
                     )
                     if Entitlements.cache[:file_objects][filebase_with_path].members == :calculating
@@ -101,7 +97,6 @@ module Entitlements
             # path - A String with the directory structure relative to Entitlements.config_path
             #
             # Returns a Set of Hashes with { "file_without_extension" => "extension" }
-            Contract String, C::KeywordArgs[options: C::HashOf[Symbol => C::Any]] => C::HashOf[String => String]
             def self.files_for(path, options:)
               @files_for_cache ||= {}
               @files_for_cache[path] ||= begin

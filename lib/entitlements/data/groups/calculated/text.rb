@@ -19,7 +19,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a Set[String] with DN's of the people in the group.
-          Contract C::None => C::Or[:calculating, C::SetOf[Entitlements::Models::Person]]
           def members
             return @members if @members
 
@@ -34,7 +33,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a String with the group description, or "" if undefined.
-          Contract C::None => String
           def description
             return "" unless parsed_data.key?("description")
 
@@ -55,7 +53,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns Hash[<String>key => <Object>value]
-          Contract C::None => C::HashOf[String => C::Any]
           def modifiers
             parse_with_prefix("modifier_")
           end
@@ -67,7 +64,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a Hash[String => :all/:none/List of strings].
-          Contract C::None => C::HashOf[String => C::Or[:all, :none, C::ArrayOf[String]]]
           def initialize_filters
             result = Entitlements::Data::Groups::Calculated.filters_default
 
@@ -110,7 +106,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns Hash[<String>key => <Object>value]
-          Contract C::None => C::HashOf[String => C::Any]
           def initialize_metadata
             parse_with_prefix("metadata_")
           end
@@ -121,7 +116,6 @@ module Entitlements
           # prefix - String with the prefix expected for the key.
           #
           # Returns Hash[<String>key => <Object>value]
-          Contract String => C::HashOf[String => C::Any]
           def parse_with_prefix(prefix)
             result = {}
             parsed_data.each do |raw_key, val|
@@ -155,7 +149,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a Hash.
-          Contract C::None => C::HashOf[String => C::Any]
           def rules
             @rules ||= begin
               ignored_keys = %w[description]
@@ -217,7 +210,6 @@ module Entitlements
           # negative    - An array of Hashes with rules.
           #
           # Returns appropriate and / or hash.
-          Contract C::ArrayOf[Hash], C::ArrayOf[Hash] => C::HashOf[String => C::Any]
           def affirmative_negative_rules(affirmative, negative)
             if negative.empty?
               # This is a simplified file. Just OR all the conditions together. (For
@@ -244,7 +236,6 @@ module Entitlements
           # filename        - Filename where rule is defined (used for error printing).
           #
           # Updates and returns array_to_update.
-          Contract C::ArrayOf[C::HashOf[String => String]], String, C::ArrayOf[C::HashOf[Symbol => String]], String => C::ArrayOf[C::HashOf[String => String]]
           def add_relevant_entries!(array_to_update, key, rule_items, filename)
             new_items = rule_items.reject { |item| expired?(item[:expiration], filename) }.map { |item| { key => item[:key] } }
             array_to_update.concat new_items
@@ -255,7 +246,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a Hash.
-          Contract C::None => C::HashOf[String => C::HashOf[String, C::ArrayOf[C::HashOf[Symbol, String]]]]
           def parsed_data
             @parsed_data ||= begin
               result = {}
@@ -312,7 +302,6 @@ module Entitlements
           # val - The predicate string
           #
           # Returns a Hash.
-          Contract String => C::HashOf[Symbol, String]
           def parsed_predicate(val)
             v = val.sub(/\s*#.*\z/, "")
             return { key: v } unless v.include?(";")

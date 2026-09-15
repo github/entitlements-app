@@ -8,6 +8,10 @@ require_relative "calculated/yaml"
 # Calculate groups that should exist and the contents of each based on a set of rules
 # defined within a directory. The calculation of members is global across the entire
 # entitlements system, so this is a singleton class.
+#
+# Calculation methods intentionally use explicit validation instead of runtime contracts.
+# These methods recurse over large collections, and collection contracts revalidate every
+# member on each cached return.
 
 module Entitlements
   class Data
@@ -47,7 +51,6 @@ module Entitlements
         # Takes no arguments.
         #
         # Returns a Entitlements::Models::Group object.
-        Contract String => Entitlements::Models::Group
         def self.read(dn)
           return @groups_cache[dn] if @groups_cache[dn]
           raise "read(#{dn.inspect}) does not support calculation at this time. Please use read_all() first to build cache."
@@ -60,9 +63,6 @@ module Entitlements
         # cfg_obj - Hash with the configuration for that key from the configuration file.
         #
         # Returns a Set of Strings (DNs) of the groups in this OU.
-        Contract String, C::HashOf[String => C::Any], C::KeywordArgs[
-          skip_broken_references: C::Optional[C::Bool]
-        ] => C::SetOf[String]
         def self.read_all(ou_key, cfg_obj, skip_broken_references: false)
           return read_mirror(ou_key, cfg_obj) if cfg_obj["mirror"]
 
@@ -97,12 +97,14 @@ module Entitlements
               # Use the ruleset to build the group.
               options = { skip_broken_references: skip_broken_references }
 
-              Entitlements.cache[:file_objects][filename] ||= ruleset(filename: filename, config: cfg_obj, options: options)
+              cache_key = file_object_key(filename)
+              Entitlements.cache[:file_objects][cache_key] ||= ruleset(filename: filename, config: cfg_obj, options: options)
+              file_object = Entitlements.cache[:file_objects][cache_key]
               @groups_cache[group_dn] = Entitlements::Models::Group.new(
                 dn: group_dn,
-                members: Entitlements.cache[:file_objects][filename].modified_filtered_members,
-                description: Entitlements.cache[:file_objects][filename].description,
-                metadata: Entitlements.cache[:file_objects][filename].metadata.merge("_filename" => filename)
+                members: file_object.modified_filtered_members,
+                description: file_object.description,
+                metadata: file_object.metadata.merge("_filename" => filename)
               )
               result.add group_dn
             end
@@ -117,7 +119,6 @@ module Entitlements
         #
         # Returns a hash { dn => Entitlements::Models::Group }
         # :nocov:
-        Contract C::None => C::HashOf[String => Entitlements::Models::Group]
         def self.to_h
           @groups_cache
         end
@@ -128,7 +129,6 @@ module Entitlements
         # Takes no arguments.
         #
         # Returns a Hash of OU to the configuration and group objects it contains.
-        Contract C::None => C::HashOf[String => { config: C::HashOf[String => C::Any], groups: C::HashOf[String => Entitlements::Models::Group]}]
         def self.all_groups
           @groups_in_ou_cache.map do |ou_key, dn_in_ou|
             if @config_cache.key?(ou_key)
@@ -153,7 +153,6 @@ module Entitlements
         # cfg_obj - Hash with the configuration for that key from the configuration file.
         #
         # Returns a Set of Strings (DNs) of the groups in this OU.
-        Contract String, C::HashOf[String => C::Any] => C::SetOf[String]
         def self.read_mirror(ou_key, cfg_obj)
           @groups_in_ou_cache[ou_key] ||= begin
             Entitlements.logger.debug "Mirroring #{ou_key} from #{cfg_obj['mirror']}"
@@ -183,15 +182,6 @@ module Entitlements
         # filename - A String with the filename.
         #
         # Returns an Entitlements::Data::Groups::Calculated::* object.
-        Contract C::KeywordArgs[
-          filename: String,
-          config: C::HashOf[String => C::Any],
-          options: C::Optional[C::HashOf[Symbol => C::Any]]
-        ] => C::Or[
-          Entitlements::Data::Groups::Calculated::Ruby,
-          Entitlements::Data::Groups::Calculated::Text,
-          Entitlements::Data::Groups::Calculated::YAML,
-        ]
         def self.ruleset(filename:, config:, options: {})
           unless filename =~ /\.(\w+)\z/
             raise ArgumentError, "Unable to determine the extension on #{filename.inspect}!"
@@ -220,6 +210,10 @@ module Entitlements
           clazz.new(filename: filename, config: config, options: options)
         end
 
+        def self.file_object_key(filename)
+          filename.sub(/\.\w+\z/, "")
+        end
+
         #########################
         # This section is handled as a class variable not an instance variable because rule definitions
         # are global throughout the program.
@@ -237,7 +231,6 @@ module Entitlements
         # Takes no arguments.
         #
         # Returns a Hash.
-        Contract C::None => C::HashOf[String => Class]
         def self.rules_index
           @rules_index
         end
@@ -247,7 +240,6 @@ module Entitlements
         # Takes no arguments.
         #
         # Returns a Hash.
-        Contract C::None => C::HashOf[String => Object]
         def self.filters_index
           @filters_index
         end

@@ -14,7 +14,6 @@ module Entitlements
           # Takes no arguments.
           #
           # Returns a Set[Entitlements::Models::Person] with DN's of the people in the group.
-          Contract C::None => C::SetOf[Entitlements::Models::Person]
           def members
             @members ||= begin
               Entitlements.logger.debug "Calculating members from #{filename}"
