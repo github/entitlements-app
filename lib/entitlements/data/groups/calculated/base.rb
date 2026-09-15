@@ -117,28 +117,11 @@ module Entitlements
               result = members.dup
               filters.reject { |_, filter_val| filter_val == :all }.each do |filter_name, filter_val|
                 filter_cfg = Entitlements::Data::Groups::Calculated.filters_index[filter_name]
+                next unless filter_applies?(filter_cfg.fetch(:config, {}))
+
                 clazz = filter_cfg.fetch(:class)
                 obj = clazz.new(filter: filter_val, config: filter_cfg.fetch(:config, {}))
-                # If excluded_paths is set, ignore any of those excluded paths
-                unless filter_cfg[:config]["excluded_paths"].nil?
-                  # if the filename is not in any of the excluded paths, filter it
-                  unless filter_cfg[:config]["excluded_paths"].any? { |excluded_path| filename.include?(excluded_path) }
-                    result.reject! { |member| obj.filtered?(member) }
-                  end
-                end
-
-                # if included_paths is set, filter only files at those included paths
-                unless filter_cfg[:config]["included_paths"].nil?
-                  # if the filename is in any of the included paths, filter it
-                  if filter_cfg[:config]["included_paths"].any? { |included_path| filename.include?(included_path) }
-                    result.reject! { |member| obj.filtered?(member) }
-                  end
-                end
-
-                # if neither included_paths nor excluded_paths are set, filter normally
-                if filter_cfg[:config]["included_paths"].nil? and filter_cfg[:config]["excluded_paths"].nil?
-                  result.reject! { |member| obj.filtered?(member) }
-                end
+                result.reject! { |member| obj.filtered?(member) }
               end
               result
             end
@@ -169,6 +152,17 @@ module Entitlements
           private
 
           attr_reader :config, :options
+
+          def filter_applies?(filter_config)
+            included_paths = filter_config["included_paths"]
+            excluded_paths = filter_config["excluded_paths"]
+
+            return true if included_paths.nil? && excluded_paths.nil?
+            return true if included_paths&.any? { |included_path| filename.include?(included_path) }
+            return true if excluded_paths&.none? { |excluded_path| filename.include?(excluded_path) }
+
+            false
+          end
 
           # Common method that takes a given list of members and applies the modifiers.
           # Used to calculated `modified_members` and `modified_filtered_members`.

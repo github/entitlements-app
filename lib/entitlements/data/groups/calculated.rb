@@ -97,11 +97,12 @@ module Entitlements
               options = { skip_broken_references: skip_broken_references }
 
               Entitlements.cache[:file_objects][filename] ||= ruleset(filename: filename, config: cfg_obj, options: options)
+              file_object = Entitlements.cache[:file_objects][filename]
               @groups_cache[group_dn] = Entitlements::Models::Group.new(
                 dn: group_dn,
-                members: Entitlements.cache[:file_objects][filename].modified_filtered_members,
-                description: Entitlements.cache[:file_objects][filename].description,
-                metadata: Entitlements.cache[:file_objects][filename].metadata.merge("_filename" => filename)
+                members: file_object.modified_filtered_members,
+                description: file_object.description,
+                metadata: file_object.metadata.merge("_filename" => filename)
               )
               result.add group_dn
             end
