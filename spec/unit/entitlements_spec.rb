@@ -171,8 +171,127 @@ describe Entitlements do
     end
   end
 
+  describe "#build_statsd" do
+    it "builds a DogStatsD client using the IAM defaults" do
+      allow(ENV).to receive(:fetch).and_call_original
+      allow(ENV).to receive(:fetch).with("DOGSTATSD_HOST", "localhost").and_return("dogstatsd.example.com")
+      allow(ENV).to receive(:fetch).with("DOGSTATSD_PORT", 28_125).and_return("28125")
+      allow(ENV).to receive(:fetch).with("KUBE_POD_NAME", "not-on-kubernetes").and_return("entitlements-123")
+      allow(ENV).to receive(:fetch).with("APP_ENV", "development").and_return("production")
+      allow(described_class).to receive(:metric_deployment_id).and_return("123456")
+      allow(Resolv).to receive(:getaddress).with("dogstatsd.example.com").and_return("192.0.2.1")
+
+      expect(Datadog::Statsd).to receive(:new).with(
+        "192.0.2.1",
+        28_125,
+        tags: [
+          "application:entitlements",
+          "kube_pod_name:entitlements-123",
+          "app_env:production",
+          "deployment_id:123456"
+        ]
+      ).and_return(statsd)
+
+      expect(described_class.build_statsd).to eq(statsd)
+    end
+  end
+
+  describe "#metric_deployment_id" do
+    it "uses the Heaven deployment ID when available" do
+      allow(ENV).to receive(:[]).with("HEAVEN_DEPLOYMENT_ID").and_return("123456")
+
+      expect(described_class.metric_deployment_id).to eq("123456")
+    end
+
+    it "uses the GitHub Actions run ID for CI jobs" do
+      allow(ENV).to receive(:[]).with("HEAVEN_DEPLOYMENT_ID").and_return(nil)
+      allow(ENV).to receive(:[]).with("GITHUB_RUN_ID").and_return("789012")
+
+      expect(described_class.metric_deployment_id).to eq("789012")
+    end
+
+    it "uses a stable fallback outside deployment and CI runs" do
+      allow(ENV).to receive(:[]).with("HEAVEN_DEPLOYMENT_ID").and_return(nil)
+      allow(ENV).to receive(:[]).with("GITHUB_RUN_ID").and_return(nil)
+
+      expect(described_class.metric_deployment_id).to eq("not-in-deployment")
+    end
+  end
+
+  describe "#close_statsd" do
+    it "closes and clears the configured client" do
+      expect(statsd).to receive(:close).once
+
+      described_class.close_statsd
+      described_class.close_statsd
+    end
+  end
+
+  describe "#timed_operation" do
+    it "measures a successful operation with provider details" do
+      tags = nil
+      expect(statsd).to receive(:time) do |metric, options, &block|
+        expect(metric).to eq("entitlements.operation.duration")
+        tags = options.fetch(:tags)
+        block.call
+      end
+
+      result = described_class.timed_operation(
+        phase: "apply",
+        provider: "aad",
+        target: "apps/azure_aad",
+        count: 1
+      ) { :result }
+
+      expect(result).to eq(:result)
+      expect(tags).to eq(
+        [
+          "phase:apply",
+          "status:success",
+          "span:leaf",
+          "concurrent:false",
+          "provider:aad",
+          "target:apps/azure_aad",
+          "count:1"
+        ]
+      )
+    end
+
+    it "measures failed operations before propagating the exception" do
+      tags = nil
+      expect(statsd).to receive(:time) do |metric, options, &block|
+        expect(metric).to eq("entitlements.operation.duration")
+        tags = options.fetch(:tags)
+        block.call
+      end
+
+      expect do
+        described_class.timed_operation(phase: "audit_setup") { raise "Boom" }
+      end.to raise_error(RuntimeError, "Boom")
+
+      expect(tags).to eq(
+        [
+          "phase:audit_setup",
+          "status:error",
+          "span:leaf",
+          "concurrent:false"
+        ]
+      )
+    end
+  end
+
   describe "#calculate" do
     let(:cache) { { people_obj: people_ldap } }
+    let(:entitlements_config_hash) do
+      {
+        "extras" => {},
+        "filters" => {},
+        "groups" => {
+          "ldap-dir" => { "type" => "ldap" },
+          "other-ldap-dir" => { "type" => "ldap" }
+        }
+      }
+    end
     let(:action1) { instance_double(Entitlements::Models::Action) }
     let(:action2) { instance_double(Entitlements::Models::Action) }
     let(:actions) { [action1, action2] }
@@ -208,8 +327,8 @@ describe Entitlements do
     let(:cache) { { people_obj: people_ldap } }
     let(:people_ldap) { instance_double(Entitlements::Data::People::LDAP) }
 
-    let(:auditor1) { instance_double(Entitlements::Auditor::Base) }
-    let(:auditor2) { instance_double(Entitlements::Auditor::Base) }
+    let(:auditor1) { instance_double(Entitlements::Auditor::Base, provider_id: "auditor1") }
+    let(:auditor2) { instance_double(Entitlements::Auditor::Base, provider_id: "auditor2") }
 
     let(:action1) { instance_double(Entitlements::Models::Action) }
     let(:action2) { instance_double(Entitlements::Models::Action) }

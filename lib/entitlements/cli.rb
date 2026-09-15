@@ -51,6 +51,8 @@ module Entitlements
       # Done.
       logger.info "Successfully applied #{Entitlements.cache[:change_count]} change(s)!"
       0
+    ensure
+      Entitlements.close_statsd
     end
     # :nocov:
 
