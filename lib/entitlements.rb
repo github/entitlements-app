@@ -145,12 +145,12 @@ module Entitlements
   end
   private_class_method :collect_rule_constant_paths
 
-  # Return the time used for date-sensitive entitlement evaluation.
+  # Return the fixed time used for the current date-sensitive entitlement evaluation.
   #
   # Returns a Time.
   Contract C::None => Time
   def self.evaluation_time
-    @evaluation_time || Time.now
+    @evaluation_time ||= Time.now
   end
 
   # Set the time used for date-sensitive entitlement evaluation.
