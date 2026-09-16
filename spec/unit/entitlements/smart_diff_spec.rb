@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require_relative "../spec_helper"
+require "fileutils"
+require "tmpdir"
 
 describe Entitlements::SmartDiff do
   let(:base) do
@@ -113,6 +115,77 @@ describe Entitlements::SmartDiff do
       evaluated_at: common[:evaluated_at]
     )
     expect(unscoped).not_to have_key("scope")
+  end
+
+  it "isolates Ruby state between base and head snapshot processes" do
+    Dir.mktmpdir do |base_tree|
+      Dir.mktmpdir do |head_tree|
+        [base_tree, head_tree].each do |tree|
+          FileUtils.cp_r(Dir.glob(File.join(fixture("smart-diff"), "*")), tree)
+        end
+
+        File.write(File.join(base_tree, "groups", "teams", "ruby-group.rb"), <<~RUBY)
+          Object.const_set(:SmartDiffProcessLeak, true)
+          module Entitlements
+            class Rule
+              class Teams
+                class RubyGroup < Entitlements::Rule::Base
+                  def members
+                    Set.new([Entitlements.cache[:people_obj].read("ALICE")])
+                  end
+                end
+              end
+            end
+          end
+        RUBY
+        File.write(File.join(head_tree, "groups", "teams", "ruby-group.rb"), <<~RUBY)
+          module Entitlements
+            class Rule
+              class Teams
+                class RubyGroup < Entitlements::Rule::Base
+                  def members
+                    username = defined?(::SmartDiffProcessLeak) ? "BOB" : "ALICE"
+                    Set.new([Entitlements.cache[:people_obj].read(username)])
+                  end
+                end
+              end
+            end
+          end
+        RUBY
+
+        result, = described_class.run(
+          base_config: File.join(base_tree, "config.yaml"),
+          head_config: File.join(head_tree, "config.yaml"),
+          base_sha: "a" * 40,
+          head_sha: "b" * 40,
+          people_source: fixture("smart-diff/people.yaml"),
+          evaluated_at: "2026-09-02T19:58:54Z",
+          base_tree: base_tree,
+          head_tree: head_tree
+        )
+
+        expect(result["scope"]).to eq("affected_groups" => ["teams/ruby-group", "teams_mirror/ruby-group"])
+        expect(result["counts"]).to eq("gains" => 0, "losses" => 0)
+      end
+    end
+  end
+
+  it "reports snapshot worker failures" do
+    status = instance_double(Process::Status, success?: false, exitstatus: 1)
+    allow(Open3).to receive(:capture3).and_return(["", "worker error\n", status])
+
+    expect do
+      described_class.send(:snapshot, label: "base", source_sha: "a" * 40)
+    end.to raise_error(ArgumentError, "base snapshot failed: worker error")
+  end
+
+  it "rejects invalid snapshot worker output" do
+    status = instance_double(Process::Status, success?: true)
+    allow(Open3).to receive(:capture3).and_return(["not json", "", status])
+
+    expect do
+      described_class.send(:snapshot, label: "head", source_sha: "b" * 40)
+    end.to raise_error(ArgumentError, /head snapshot returned invalid JSON/)
   end
 
   it "rejects invalid or inconsistent snapshots" do

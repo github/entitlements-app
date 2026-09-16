@@ -101,12 +101,7 @@ module Entitlements
           Contract C::None => Object
           def rule_obj
             @rule_obj ||= begin
-              constants_before_load = Entitlements.rule_constant_paths
-              begin
-                load filename
-              ensure
-                Entitlements.record_rule_constants(Entitlements.rule_constant_paths - constants_before_load)
-              end
+              load filename
               clazz = Kernel.const_get(ruby_class_name)
               clazz.new
             end

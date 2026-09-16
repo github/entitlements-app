@@ -2,6 +2,8 @@
 
 require "cgi"
 require "json"
+require "open3"
+require "rbconfig"
 require "set"
 require_relative "smart_diff/scope"
 
@@ -23,14 +25,16 @@ module Entitlements
                           )
                         end
       common = {people_source: people_source, evaluated_at: evaluated_at}
-      base = Entitlements::DesiredGroups.export(
+      base = snapshot(
+        label: "base",
         config_file: base_config,
         source_sha: base_sha,
         tree_root: base_tree,
         entitlement_groups: affected_groups,
         **common
       )
-      head = Entitlements::DesiredGroups.export(
+      head = snapshot(
+        label: "head",
         config_file: head_config,
         source_sha: head_sha,
         tree_root: head_tree,
@@ -67,6 +71,24 @@ module Entitlements
       result["scope"] = {"affected_groups" => affected_groups} if affected_groups
       [result, markdown(result, limit: markdown_limit)]
     end
+
+    def self.snapshot(label:, **options)
+      stdout, stderr, status = Open3.capture3(
+        RbConfig.ruby,
+        File.expand_path("smart_diff/snapshot_worker.rb", __dir__),
+        stdin_data: JSON.generate(options)
+      )
+      unless status.success?
+        detail = stderr.strip
+        detail = "worker exited with status #{status.exitstatus}" if detail.empty?
+        raise ArgumentError, "#{label} snapshot failed: #{detail}"
+      end
+
+      JSON.parse(stdout)
+    rescue JSON::ParserError => e
+      raise ArgumentError, "#{label} snapshot returned invalid JSON: #{e.message}"
+    end
+    private_class_method :snapshot
 
     def self.json(result)
       JSON.pretty_generate(result) << "\n"
