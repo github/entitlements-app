@@ -25,23 +25,28 @@ module Entitlements
                           )
                         end
       common = {people_source: people_source, evaluated_at: evaluated_at}
-      base = snapshot(
-        label: "base",
-        config_file: base_config,
-        source_sha: base_sha,
-        tree_root: base_tree,
-        entitlement_groups: affected_groups,
-        **common
+      snapshots = parallel_snapshots(
+        "base" => {
+          config_file: base_config,
+          source_sha: base_sha,
+          tree_root: base_tree,
+          entitlement_groups: affected_groups,
+          **common
+        },
+        "head" => {
+          config_file: head_config,
+          source_sha: head_sha,
+          tree_root: head_tree,
+          entitlement_groups: affected_groups,
+          **common
+        }
       )
-      head = snapshot(
-        label: "head",
-        config_file: head_config,
-        source_sha: head_sha,
-        tree_root: head_tree,
-        entitlement_groups: affected_groups,
-        **common
+      compare(
+        base: snapshots.fetch("base"),
+        head: snapshots.fetch("head"),
+        markdown_limit: markdown_limit,
+        affected_groups: affected_groups
       )
-      compare(base: base, head: head, markdown_limit: markdown_limit, affected_groups: affected_groups)
     end
 
     def self.compare(base:, head:, markdown_limit: DEFAULT_MARKDOWN_LIMIT, affected_groups: nil)
@@ -89,6 +94,22 @@ module Entitlements
       raise ArgumentError, "#{label} snapshot returned invalid JSON: #{e.message}"
     end
     private_class_method :snapshot
+
+    def self.parallel_snapshots(requests)
+      threads = requests.map do |label, options|
+        Thread.new do
+          [label, snapshot(label: label, **options), nil]
+        rescue StandardError => e
+          [label, nil, e]
+        end
+      end
+      results = threads.map(&:value)
+      failed = results.find { |_label, _snapshot, error| error }
+      raise failed.fetch(2) if failed
+
+      results.to_h { |label, result, _error| [label, result] }
+    end
+    private_class_method :parallel_snapshots
 
     def self.json(result)
       JSON.pretty_generate(result) << "\n"

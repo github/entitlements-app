@@ -3,6 +3,7 @@
 require_relative "../spec_helper"
 require "fileutils"
 require "tmpdir"
+require "timeout"
 
 describe Entitlements::SmartDiff do
   let(:base) do
@@ -170,12 +171,53 @@ describe Entitlements::SmartDiff do
     end
   end
 
+  it "calculates base and head snapshots in parallel" do
+    mutex = Mutex.new
+    ready = ConditionVariable.new
+    started = 0
+    release = false
+    allow(described_class).to receive(:snapshot) do |options|
+      label = options.fetch(:label)
+      mutex.synchronize do
+        started += 1
+        ready.broadcast
+        ready.wait(mutex) until release
+      end
+      {"label" => label}
+    end
+
+    result = nil
+    begin
+      result = Timeout.timeout(2) do
+        thread = Thread.new do
+          described_class.send(:parallel_snapshots, "base" => {}, "head" => {})
+        end
+        mutex.synchronize do
+          ready.wait(mutex) until started == 2
+          release = true
+          ready.broadcast
+        end
+        thread.value
+      end
+    ensure
+      mutex.synchronize do
+        release = true
+        ready.broadcast
+      end
+    end
+
+    expect(result).to eq(
+      "base" => {"label" => "base"},
+      "head" => {"label" => "head"}
+    )
+  end
+
   it "reports snapshot worker failures" do
     status = instance_double(Process::Status, success?: false, exitstatus: 1)
     allow(Open3).to receive(:capture3).and_return(["", "worker error\n", status])
 
     expect do
-      described_class.send(:snapshot, label: "base", source_sha: "a" * 40)
+      described_class.send(:parallel_snapshots, "base" => {source_sha: "a" * 40})
     end.to raise_error(ArgumentError, "base snapshot failed: worker error")
   end
 
