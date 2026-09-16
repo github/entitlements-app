@@ -10,8 +10,14 @@
 #
 # The `sqlite3` gem is an optional dependency: it is required lazily so that installations
 # which do not use this feature do not need it.
+#
+# Output is deterministic: rows are inserted in the sorted order produced by the snapshot, the
+# page size is fixed, and the database is vacuumed before it is moved into place. Two runs over
+# identical input therefore produce byte-identical files, apart from the `generated_at`
+# timestamp that the snapshot records in the `run` table.
 
 require "fileutils"
+require "securerandom"
 
 module Entitlements
   class Graph
@@ -213,27 +219,31 @@ module Entitlements
         self.class.load_driver!
 
         FileUtils.mkdir_p(File.dirname(path))
-        temporary_path = "#{path}.tmp.#{Process.pid}"
-        FileUtils.rm_f(temporary_path)
+        temporary_path = "#{path}.tmp.#{Process.pid}.#{SecureRandom.hex(8)}"
 
-        db = SQLite3::Database.new(temporary_path)
         begin
-          db.execute("PRAGMA page_size = #{PAGE_SIZE}")
-          db.execute("PRAGMA journal_mode = OFF")
-          db.execute("PRAGMA application_id = #{APPLICATION_ID}")
-          db.execute("PRAGMA user_version = #{Entitlements::Graph::Snapshot::SCHEMA_VERSION}")
+          db = SQLite3::Database.new(temporary_path)
+          begin
+            db.execute("PRAGMA page_size = #{PAGE_SIZE}")
+            db.execute("PRAGMA journal_mode = OFF")
+            db.execute("PRAGMA application_id = #{APPLICATION_ID}")
+            db.execute("PRAGMA user_version = #{Entitlements::Graph::Snapshot::SCHEMA_VERSION}")
 
-          SCHEMA.each { |statement| db.execute(statement) }
-          VIEWS.each { |statement| db.execute(statement) }
+            SCHEMA.each { |statement| db.execute(statement) }
+            VIEWS.each { |statement| db.execute(statement) }
 
-          db.transaction { populate(db) }
+            db.transaction { populate(db) }
 
-          db.execute("VACUUM")
+            db.execute("VACUUM")
+          ensure
+            db.close
+          end
+
+          FileUtils.mv(temporary_path, path)
         ensure
-          db.close
+          FileUtils.rm_f(temporary_path)
         end
 
-        FileUtils.mv(temporary_path, path)
         path
       end
 
@@ -284,7 +294,7 @@ module Entitlements
         return if rows.empty?
 
         placeholders = Array.new(columns.size, "?").join(", ")
-        statement = db.prepare("INSERT OR REPLACE INTO #{table} (#{columns.join(', ')}) VALUES (#{placeholders})")
+        statement = db.prepare("INSERT INTO #{table} (#{columns.join(', ')}) VALUES (#{placeholders})")
         begin
           rows.each { |row| statement.execute(columns.map { |column| row[column] }) }
         ensure

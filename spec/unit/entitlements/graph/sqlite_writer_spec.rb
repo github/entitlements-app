@@ -188,15 +188,10 @@ describe Entitlements::Graph::SQLiteWriter do
       expect(File.read(first, mode: "rb")).to eq(File.read(second, mode: "rb"))
     end
 
-    it "overwrites a leftover temporary file from a previous run" do
-      leftover = "#{path}.tmp.#{Process.pid}"
-      FileUtils.mkdir_p(File.dirname(path))
-      File.write(leftover, "garbage")
-      described_class.new(snapshot).write!(path)
-      expect(File.exist?(leftover)).to eq(false)
-      db = SQLite3::Database.new(path)
-      expect(db.execute("SELECT COUNT(*) FROM \"group\"").flatten.first).to eq(3)
-      db.close
+    it "cleans up the temporary file when the write fails" do
+      expect(FileUtils).to receive(:mv).and_raise(Errno::EACCES, "denied")
+      expect { described_class.new(snapshot).write!(path) }.to raise_error(Errno::EACCES)
+      expect(Dir.glob(File.join(File.dirname(path), "*"))).to eq([])
     end
 
     it "raises DriverUnavailable when the gem is missing" do
