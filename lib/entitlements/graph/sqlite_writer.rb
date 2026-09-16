@@ -241,6 +241,8 @@ module Entitlements
 
           FileUtils.mv(temporary_path, path)
         ensure
+          # Cleans up a partially written database when anything above raised. This is a no-op
+          # on the success path, where the file has already been moved to its destination.
           FileUtils.rm_f(temporary_path)
         end
 

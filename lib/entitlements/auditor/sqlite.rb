@@ -75,7 +75,8 @@ module Entitlements
 
       private
 
-      # The allowlist of person attributes to record in the database.
+      # The allowlist of person attributes to record in the database. The type is validated
+      # here rather than in `setup`, which calls this method as part of its validation.
       #
       # Takes no arguments.
       #
