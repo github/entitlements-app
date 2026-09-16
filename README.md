@@ -56,6 +56,12 @@ Out of the box, Entitlements will output your sets to LDAP.
 
 See the [OpenLDAP documentation](https://www.openldap.org/doc/) for more on LDAP.
 
+### Graph database
+
+Entitlements can also export the graph it computes - groups, people, memberships, group references, and applied changes - into a queryable SQLite database.
+
+See [graph database](docs/graph-database.md) for configuration, the schema, and example queries.
+
 ## Plugins
 
 Entitlements is a pluggable system. Plugins can be built for additional inputs and outputs.
