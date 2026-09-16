@@ -14,7 +14,7 @@ module Entitlements
     LIMITATION = "This compares desired entitlement-group membership. It does not predict provider-specific roles, " \
       "resource mappings, drift, invitations, JIT sessions, or API operations."
 
-    def self.run(base_config:, head_config:, base_sha:, head_sha:, people_source:, evaluated_at:, base_tree: nil, head_tree: nil, markdown_limit: DEFAULT_MARKDOWN_LIMIT)
+    def self.run(base_config:, head_config:, base_sha:, head_sha:, people_source:, evaluated_at:, base_tree: nil, head_tree: nil, markdown_limit: DEFAULT_MARKDOWN_LIMIT, required_features: [])
       affected_groups = if base_tree && head_tree
                           Entitlements::SmartDiff::Scope.affected_groups(
                             base_config: base_config,
@@ -24,7 +24,11 @@ module Entitlements
                             evaluated_at: evaluated_at
                           )
                         end
-      common = {people_source: people_source, evaluated_at: evaluated_at}
+      common = {
+        people_source: people_source,
+        evaluated_at: evaluated_at,
+        required_features: required_features
+      }
       snapshots = parallel_snapshots(
         "base" => {
           config_file: base_config,
@@ -78,8 +82,15 @@ module Entitlements
     end
 
     def self.snapshot(label:, **options)
+      required_features = Array(options.delete(:required_features))
+      unless required_features.all? { |feature| feature.is_a?(String) && !feature.empty? }
+        raise ArgumentError, "required_features must contain non-empty strings"
+      end
+      require_options = required_features.flat_map { |feature| ["-r", feature] }
       stdout, stderr, status = Open3.capture3(
+        {"RUBYLIB" => $LOAD_PATH.uniq.join(File::PATH_SEPARATOR)},
         RbConfig.ruby,
+        *require_options,
         File.expand_path("smart_diff/snapshot_worker.rb", __dir__),
         stdin_data: JSON.generate(options)
       )

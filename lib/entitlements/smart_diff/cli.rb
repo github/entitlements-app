@@ -19,7 +19,8 @@ module Entitlements
           evaluated_at: options.fetch(:evaluated_at),
           base_tree: options.fetch(:base_tree),
           head_tree: options.fetch(:head_tree),
-          markdown_limit: options.fetch(:markdown_limit)
+          markdown_limit: options.fetch(:markdown_limit),
+          required_features: options.fetch(:required_features)
         )
         File.write(options.fetch(:json), Entitlements::SmartDiff.json(result))
         File.write(options.fetch(:markdown), markdown)
@@ -30,7 +31,10 @@ module Entitlements
       end
 
       def self.parse(argv)
-        options = {markdown_limit: Entitlements::SmartDiff::DEFAULT_MARKDOWN_LIMIT}
+        options = {
+          markdown_limit: Entitlements::SmartDiff::DEFAULT_MARKDOWN_LIMIT,
+          required_features: []
+        }
         parser = OptionParser.new do |opts|
           opts.banner = "Usage: entitlements-smart-diff [options]"
           opts.on("--base-tree PATH") { |value| options[:base_tree] = value }
@@ -44,6 +48,7 @@ module Entitlements
           opts.on("--json PATH") { |value| options[:json] = value }
           opts.on("--markdown PATH") { |value| options[:markdown] = value }
           opts.on("--markdown-limit COUNT", Integer) { |value| options[:markdown_limit] = value }
+          opts.on("--require FEATURE") { |value| options[:required_features] << value }
         end
         parser.parse!(argv)
         required = %i[base_tree head_tree base_sha head_sha people_snapshot evaluated_at json markdown]

@@ -221,6 +221,12 @@ describe Entitlements::SmartDiff do
     end.to raise_error(ArgumentError, "base snapshot failed: worker error")
   end
 
+  it "rejects invalid snapshot worker requirements" do
+    expect do
+      described_class.send(:snapshot, label: "base", required_features: [nil])
+    end.to raise_error(ArgumentError, /required_features/)
+  end
+
   it "rejects invalid snapshot worker output" do
     status = instance_double(Process::Status, success?: true)
     allow(Open3).to receive(:capture3).and_return(["not json", "", status])
