@@ -666,6 +666,7 @@ end
 
 # Finally, load everything else. Order should be unimportant here.
 require_relative "entitlements/auditor/base"
+require_relative "entitlements/auditor/sqlite"
 require_relative "entitlements/backend/base_controller"
 require_relative "entitlements/backend/base_provider"
 require_relative "entitlements/backend/dummy"
@@ -679,6 +680,8 @@ require_relative "entitlements/extras/base"
 require_relative "entitlements/models/action"
 require_relative "entitlements/models/group"
 require_relative "entitlements/models/person"
+require_relative "entitlements/graph/snapshot"
+require_relative "entitlements/graph/sqlite_writer"
 require_relative "entitlements/plugins"
 require_relative "entitlements/plugins/dummy"
 require_relative "entitlements/plugins/group_of_names"

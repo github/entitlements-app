@@ -47,6 +47,7 @@ module Entitlements
               # remembers the value of `.modified_members` each time it's calculated, so this is inexpensive.
               filebase_with_path = File.join(Entitlements::Util::Util.path_for_group(ou), cn)
               if Entitlements.cache[:file_objects].key?(filebase_with_path)
+                record_dependency("#{ou}/#{cn}")
                 return Entitlements.cache[:file_objects][filebase_with_path].modified_members
               end
 
@@ -58,6 +59,7 @@ module Entitlements
                 result = Set.new
                 matching_files.each do |filebase, ext|
                   filebase_with_path = File.join(Entitlements::Util::Util.path_for_group(ou), filebase)
+                  record_dependency("#{ou}/#{filebase}")
 
                   # If the object has already been calculated then we can just merge the value from
                   # the cache without going any further. Otherwise, create a new object for the group
@@ -89,6 +91,23 @@ module Entitlements
 
               Entitlements.logger.fatal "Error: Could not find a configuration for #{path} (filename: #{filename.inspect})"
               raise "Error: Could not find a configuration for #{path} (filename: #{filename.inspect})"
+            end
+
+            # Record a group-to-group dependency edge, so that the graph of references between
+            # entitlements can be reported on later. The parent is the group currently being
+            # calculated, which is the top of the dependency stack.
+            #
+            # child_reference - A String with the "<ou>/<cn>" reference of the group being read.
+            #
+            # Returns nothing.
+            Contract String => C::Any
+            def self.record_dependency(child_reference)
+              parent_reference = (Entitlements.cache[:dependencies] || []).last
+              return if parent_reference.nil?
+
+              Entitlements.cache[:group_dependencies] ||= Set.new
+              Entitlements.cache[:group_dependencies].add([parent_reference, child_reference])
+              nil
             end
 
             # Enumerate and cache all files in a directory for more efficient processing later.

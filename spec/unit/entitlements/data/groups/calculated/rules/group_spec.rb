@@ -153,6 +153,19 @@ describe Entitlements::Data::Groups::Calculated::Rules::Group do
     end
   end
 
+  describe "#record_dependency" do
+    it "records an edge from the group being calculated to the group being read" do
+      cache[:dependencies] = ["foo/parent"]
+      described_class.record_dependency("foo/child")
+      expect(cache[:group_dependencies]).to eq(Set.new([["foo/parent", "foo/child"]]))
+    end
+
+    it "does nothing when no group is being calculated" do
+      described_class.record_dependency("foo/child")
+      expect(cache[:group_dependencies]).to be nil
+    end
+  end
+
   describe "#files_for" do
     after(:each) do
       described_class.instance_variable_set(:"@files_for_cache", nil)
