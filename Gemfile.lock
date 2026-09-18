@@ -141,6 +141,7 @@ GEM
     simplecov_json_formatter (0.1.4)
     sqlite3 (1.7.3)
       mini_portile2 (~> 2.8.0)
+    sqlite3 (1.7.3-x86_64-linux)
     stringio (3.1.4)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
