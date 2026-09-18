@@ -1,0 +1,269 @@
+# frozen_string_literal: true
+
+require "cgi"
+require "json"
+require "open3"
+require "rbconfig"
+require "set"
+require_relative "smart_diff/identity_snapshot"
+require_relative "smart_diff/database"
+require_relative "smart_diff/scope"
+
+module Entitlements
+  class SmartDiff
+    SCHEMA_VERSION = 1
+    DEFAULT_MARKDOWN_LIMIT = 200
+    LIMITATION = "This compares desired entitlement-group membership. It does not predict provider-specific roles, " \
+      "resource mappings, drift, invitations, JIT sessions, or API operations."
+
+    def self.run(base_config:, head_config:, base_sha:, head_sha:, evaluated_at:, people_source: nil, base_people_source: nil, head_people_source: nil, base_tree: nil, head_tree: nil, markdown_limit: DEFAULT_MARKDOWN_LIMIT, required_features: [])
+      base_people_source ||= people_source
+      head_people_source ||= people_source
+      identity_sources_changed = if base_tree && head_tree
+                                   if base_people_source && head_people_source
+                                     Digest::SHA256.file(base_people_source).hexdigest != Digest::SHA256.file(head_people_source).hexdigest
+                                   else
+                                     Entitlements::SmartDiff::IdentitySnapshot.sources_changed?(
+                                       base_tree: base_tree,
+                                       head_tree: head_tree
+                                     )
+                                   end
+                                 end
+      affected_groups = if base_tree && head_tree
+                          Entitlements::SmartDiff::Scope.affected_groups(
+                            base_config: base_config,
+                            head_config: head_config,
+                            base_tree: base_tree,
+                            head_tree: head_tree,
+                            evaluated_at: evaluated_at,
+                            identity_sources_changed: identity_sources_changed
+                          )
+                        end
+      common = {
+        evaluated_at: evaluated_at,
+        required_features: required_features
+      }
+      snapshots = parallel_snapshots(
+        "base" => {
+          config_file: base_config,
+          source_sha: base_sha,
+          tree_root: base_tree,
+          entitlement_groups: affected_groups,
+          people_source: base_people_source,
+          **common
+        },
+        "head" => {
+          config_file: head_config,
+          source_sha: head_sha,
+          tree_root: head_tree,
+          entitlement_groups: affected_groups,
+          people_source: head_people_source,
+          **common
+        }
+      )
+      compare(
+        base: snapshots.fetch("base"),
+        head: snapshots.fetch("head"),
+        markdown_limit: markdown_limit,
+        affected_groups: affected_groups
+      )
+    end
+
+    def self.compare(base:, head:, markdown_limit: DEFAULT_MARKDOWN_LIMIT, affected_groups: nil)
+      validate_snapshot!(base, "base")
+      validate_snapshot!(head, "head")
+      raise ArgumentError, "Base and head used different evaluation timestamps" unless base["evaluated_at"] == head["evaluated_at"]
+      raise ArgumentError, "markdown_limit must be a positive integer" unless markdown_limit.is_a?(Integer) && markdown_limit.positive?
+
+      if affected_groups
+        base = scoped_snapshot(base, affected_groups)
+        head = scoped_snapshot(head, affected_groups)
+      end
+      base_memberships = indexed_memberships(base)
+      head_memberships = indexed_memberships(head)
+      gains = (head_memberships.keys - base_memberships.keys).sort.map { |identity| head_memberships.fetch(identity) }
+      losses = (base_memberships.keys - head_memberships.keys).sort.map { |identity| base_memberships.fetch(identity) }
+      changed_usernames = (gains + losses).map { |record| record.fetch("username") }.to_set
+
+      result = {
+        "schema_version" => SCHEMA_VERSION,
+        "base" => snapshot_metadata(base),
+        "head" => snapshot_metadata(head),
+        "counts" => {"gains" => gains.length, "losses" => losses.length},
+        "gains" => gains,
+        "losses" => losses,
+        "people" => {
+          "base" => selected_people(base, changed_usernames),
+          "head" => selected_people(head, changed_usernames)
+        }
+      }
+      result["scope"] = {"affected_groups" => affected_groups} if affected_groups
+      [result, markdown(result, limit: markdown_limit)]
+    end
+
+    def self.snapshot(label:, **options)
+      required_features = Array(options.delete(:required_features))
+      unless required_features.all? { |feature| feature.is_a?(String) && !feature.empty? }
+        raise ArgumentError, "required_features must contain non-empty strings"
+      end
+      require_options = required_features.flat_map { |feature| ["-r", feature] }
+      stdout, stderr, status = Open3.capture3(
+        {"RUBYLIB" => $LOAD_PATH.uniq.join(File::PATH_SEPARATOR)},
+        RbConfig.ruby,
+        *require_options,
+        File.expand_path("smart_diff/snapshot_worker.rb", __dir__),
+        stdin_data: JSON.generate(options)
+      )
+      unless status.success?
+        detail = stderr.strip
+        detail = "worker exited with status #{status.exitstatus}" if detail.empty?
+        raise ArgumentError, "#{label} snapshot failed: #{detail}"
+      end
+
+      JSON.parse(stdout)
+    rescue JSON::ParserError => e
+      raise ArgumentError, "#{label} snapshot returned invalid JSON: #{e.message}"
+    end
+    private_class_method :snapshot
+
+    def self.parallel_snapshots(requests)
+      threads = requests.map do |label, options|
+        Thread.new do
+          [label, snapshot(label: label, **options), nil]
+        rescue StandardError => e
+          [label, nil, e]
+        end
+      end
+      results = threads.map(&:value)
+      failed = results.find { |_label, _snapshot, error| error }
+      raise failed.fetch(2) if failed
+
+      results.to_h { |label, result, _error| [label, result] }
+    end
+    private_class_method :parallel_snapshots
+
+    def self.markdown(result, limit: DEFAULT_MARKDOWN_LIMIT)
+      lines = [
+        "## Proposed entitlement membership changes",
+        "",
+        "**#{membership_count(result.fetch('counts').fetch('gains'))} added; " \
+          "#{membership_count(result.fetch('counts').fetch('losses'))} removed.**",
+        "",
+        "Base: `#{result.fetch('base').fetch('source_sha')}`  ",
+        "Base identity: `#{result.fetch('base').fetch('people_snapshot_sha256')}`  ",
+        "Head: `#{result.fetch('head').fetch('source_sha')}`  ",
+        "Head identity: `#{result.fetch('head').fetch('people_snapshot_sha256')}`",
+        ""
+      ]
+      if result["scope"]
+        lines.concat(["Affected entitlement groups: #{result.fetch('scope').fetch('affected_groups').length}", ""])
+      end
+
+      changes_by_backend = Hash.new { |hash, backend| hash[backend] = [] }
+      [["Added", "gains"], ["Removed", "losses"]].each do |change, key|
+        result.fetch(key).each do |record|
+          changes_by_backend[record.fetch("backend")] << [change, record]
+        end
+      end
+
+      if changes_by_backend.empty?
+        lines.concat(["No membership changes.", ""])
+      end
+
+      remaining = limit
+      changes_by_backend.sort.each do |backend, changes|
+        added_count = changes.count { |change, _record| change == "Added" }
+        removed_count = changes.length - added_count
+        lines.concat([
+          "<details>",
+          "<summary><strong>#{escape_html(backend)}</strong> - #{membership_count(added_count)} added; " \
+            "#{membership_count(removed_count)} removed</summary>",
+          ""
+        ])
+
+        visible = changes.first(remaining)
+        if visible.any?
+          lines.concat(["| Change | User | Entitlement group |", "|---|---|---|"])
+          visible.each do |change, record|
+            lines << "| #{change} | #{escape_table(record.fetch('username'))} | " \
+              "#{escape_table(record.fetch('entitlement_group'))} |"
+          end
+          lines << ""
+        end
+
+        remaining -= visible.length
+        omitted = changes.length - visible.length
+        lines.concat(["_#{omitted} additional memberships omitted; query the SQLite artifact for the complete diff._", ""]) if omitted.positive?
+        lines.concat(["</details>", ""])
+      end
+
+      lines.concat(["> #{LIMITATION}", ""])
+      lines.join("\n")
+    end
+
+    def self.validate_snapshot!(snapshot, label)
+      raise ArgumentError, "#{label} snapshot must be a hash" unless snapshot.is_a?(Hash)
+      raise ArgumentError, "#{label} snapshot has an unsupported schema version" unless snapshot["schema_version"] == Entitlements::DesiredGroups::SCHEMA_VERSION
+      %w[source_sha people_snapshot_sha256 evaluated_at people memberships].each do |key|
+        raise ArgumentError, "#{label} snapshot is missing #{key}" unless snapshot.key?(key)
+      end
+      unless snapshot.fetch("source_sha").is_a?(String) && snapshot.fetch("source_sha").match?(/\A[0-9a-f]{7,64}\z/i)
+        raise ArgumentError, "#{label} snapshot has an invalid source_sha"
+      end
+      raise ArgumentError, "#{label} memberships must be an array" unless snapshot["memberships"].is_a?(Array)
+      raise ArgumentError, "#{label} people must be a hash" unless snapshot["people"].is_a?(Hash)
+    end
+    private_class_method :validate_snapshot!
+
+    def self.indexed_memberships(snapshot)
+      snapshot.fetch("memberships").to_h do |record|
+        unless record.is_a?(Hash) && %w[backend entitlement_group username].all? { |key| record[key].is_a?(String) }
+          raise ArgumentError, "Invalid membership record: #{record.inspect}"
+        end
+        identity = record.values_at("backend", "entitlement_group", "username")
+        [identity, record]
+      end
+    end
+    private_class_method :indexed_memberships
+
+    def self.snapshot_metadata(snapshot)
+      snapshot.slice("source_sha", "people_snapshot_sha256", "evaluated_at")
+    end
+    private_class_method :snapshot_metadata
+
+    def self.selected_people(snapshot, usernames)
+      snapshot.fetch("people").filter_map do |username, attributes|
+        next unless usernames.include?(username.downcase)
+        raise ArgumentError, "Invalid people attributes for #{username}" unless attributes.is_a?(Hash)
+
+        {"username" => username.downcase, "attributes" => attributes}
+      end.sort_by { |record| record.fetch("username") }
+    end
+    private_class_method :selected_people
+
+    def self.scoped_snapshot(snapshot, affected_groups)
+      included = affected_groups.to_set
+      snapshot.merge(
+        "memberships" => snapshot.fetch("memberships").select do |record|
+          included.include?(record.fetch("entitlement_group"))
+        end
+      )
+    end
+    private_class_method :scoped_snapshot
+
+    def self.escape_html(value)
+      CGI.escapeHTML(value.to_s.gsub(/[\r\n]+/, " "))
+    end
+    private_class_method :escape_html
+
+    def self.escape_table(value)
+      escape_html(value).gsub("|") { "&#124;" }
+    end
+    private_class_method :escape_table
+
+    def self.membership_count(count)
+      "#{count} #{count == 1 ? 'membership' : 'memberships'}"
+    end
+    private_class_method :membership_count
+  end
+end

@@ -39,6 +39,7 @@ module Entitlements
           @groups_in_ou_cache = {}
           @groups_cache = {}
           @config_cache = {}
+          Entitlements::Data::Groups::Calculated::Rules::Group.reset!
         end
 
         # Construct a group object.

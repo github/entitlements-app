@@ -22,6 +22,16 @@ module Entitlements
             options: C::Optional[C::HashOf[Symbol => C::Any]]
           ] => C::SetOf[Entitlements::Models::Person]
           def self.matches(value:, filename: nil, options: {})
+            if Entitlements.cache[:desired_groups_export]
+              return Set.new(Entitlements.cache[:people_obj].read.values.select do |person|
+                begin
+                  Array(person["shellentitlements"]).map(&:downcase).include?(value.downcase)
+                rescue KeyError
+                  false
+                end
+              end)
+            end
+
             Entitlements.cache[:ldap_cache] ||= {}
             Entitlements.cache[:ldap_cache][value] ||= begin
               entry = ldap.read(value)
