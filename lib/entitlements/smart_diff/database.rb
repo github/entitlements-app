@@ -2,7 +2,7 @@
 
 require "json"
 require "fileutils"
-require "sqlite3"
+require "extralite"
 
 module Entitlements
   class SmartDiff
@@ -104,8 +104,8 @@ module Entitlements
 
       def self.write(path:, result:)
         FileUtils.rm_f(path)
-        db = SQLite3::Database.new(path)
-        db.execute_batch(SCHEMA)
+        db = Extralite::Database.new(path)
+        db.execute(SCHEMA)
         db.transaction do
           insert_result(db, result)
         end
@@ -115,8 +115,7 @@ module Entitlements
       end
 
       def self.read(path)
-        db = SQLite3::Database.new(path)
-        db.results_as_hash = true
+        db = Extralite::Database.new(path)
         yield db
       ensure
         db&.close
@@ -130,36 +129,30 @@ module Entitlements
       def self.insert_result(db, result)
         db.execute(
           "INSERT INTO metadata (id, schema_version, evaluated_at, scoped) VALUES (1, ?, ?, ?)",
-          [
-            result.fetch("schema_version"),
-            result.fetch("base").fetch("evaluated_at"),
-            result.key?("scope") ? 1 : 0
-          ]
+          result.fetch("schema_version"),
+          result.fetch("base").fetch("evaluated_at"),
+          result.key?("scope") ? 1 : 0
         )
         %w[base head].each do |snapshot|
           metadata = result.fetch(snapshot)
           db.execute(
             "INSERT INTO snapshots (snapshot, source_sha, people_snapshot_sha256) VALUES (?, ?, ?)",
-            [
-              snapshot,
-              metadata.fetch("source_sha"),
-              metadata.fetch("people_snapshot_sha256")
-            ]
+            snapshot,
+            metadata.fetch("source_sha"),
+            metadata.fetch("people_snapshot_sha256")
           )
         end
         result.fetch("scope", {}).fetch("affected_groups", []).each do |group|
-          db.execute("INSERT INTO affected_groups (entitlement_group) VALUES (?)", [group])
+          db.execute("INSERT INTO affected_groups (entitlement_group) VALUES (?)", group)
         end
         {"gain" => "gains", "loss" => "losses"}.each do |change_type, key|
           result.fetch(key).each do |record|
             db.execute(
               "INSERT INTO membership_changes (change_type, backend, entitlement_group, username) VALUES (?, ?, ?, ?)",
-              [
-                change_type,
-                record.fetch("backend"),
-                record.fetch("entitlement_group"),
-                record.fetch("username")
-              ]
+              change_type,
+              record.fetch("backend"),
+              record.fetch("entitlement_group"),
+              record.fetch("username")
             )
           end
         end
@@ -167,11 +160,9 @@ module Entitlements
           people.each do |record|
             db.execute(
               "INSERT INTO people (snapshot, username, attributes_json) VALUES (?, ?, ?)",
-              [
-                snapshot,
-                record.fetch("username"),
-                JSON.generate(record.fetch("attributes"))
-              ]
+              snapshot,
+              record.fetch("username"),
+              JSON.generate(record.fetch("attributes"))
             )
           end
         end
@@ -179,38 +170,38 @@ module Entitlements
       private_class_method :insert_result
 
       def self.result_from(db)
-        metadata = db.get_first_row("SELECT schema_version, evaluated_at, scoped FROM metadata WHERE id = 1")
-        snapshots = db.execute("SELECT snapshot, source_sha, people_snapshot_sha256 FROM snapshots").to_h do |row|
+        metadata = db.query_single("SELECT schema_version, evaluated_at, scoped FROM metadata WHERE id = 1")
+        snapshots = db.query("SELECT snapshot, source_sha, people_snapshot_sha256 FROM snapshots").to_h do |row|
           [
-            row.fetch("snapshot"),
+            row.fetch(:snapshot),
             {
-              "source_sha" => row.fetch("source_sha"),
-              "people_snapshot_sha256" => row.fetch("people_snapshot_sha256"),
-              "evaluated_at" => metadata.fetch("evaluated_at")
+              "source_sha" => row.fetch(:source_sha),
+              "people_snapshot_sha256" => row.fetch(:people_snapshot_sha256),
+              "evaluated_at" => metadata.fetch(:evaluated_at)
             }
           ]
         end
         result = {
-          "schema_version" => metadata.fetch("schema_version"),
+          "schema_version" => metadata.fetch(:schema_version),
           "base" => snapshots.fetch("base"),
           "head" => snapshots.fetch("head"),
           "counts" => {
-            "gains" => db.get_first_value("SELECT count(*) FROM membership_changes WHERE change_type = 'gain'"),
-            "losses" => db.get_first_value("SELECT count(*) FROM membership_changes WHERE change_type = 'loss'")
+            "gains" => db.query_single_splat("SELECT count(*) FROM membership_changes WHERE change_type = 'gain'"),
+            "losses" => db.query_single_splat("SELECT count(*) FROM membership_changes WHERE change_type = 'loss'")
           },
           "gains" => membership_changes(db, "gain"),
           "losses" => membership_changes(db, "loss")
         }
-        groups = db.execute("SELECT entitlement_group FROM affected_groups ORDER BY entitlement_group").map do |row|
-          row.fetch("entitlement_group")
+        groups = db.query("SELECT entitlement_group FROM affected_groups ORDER BY entitlement_group").map do |row|
+          row.fetch(:entitlement_group)
         end
-        result["scope"] = {"affected_groups" => groups} if metadata.fetch("scoped") == 1
+        result["scope"] = {"affected_groups" => groups} if metadata.fetch(:scoped) == 1
         result
       end
       private_class_method :result_from
 
       def self.membership_changes(db, change_type)
-        rows = db.execute(<<~SQL, [change_type])
+        rows = db.query(<<~SQL, change_type)
           SELECT backend, entitlement_group, username
           FROM membership_changes
           WHERE change_type = ?
@@ -218,9 +209,9 @@ module Entitlements
         SQL
         rows.map do |row|
           {
-            "backend" => row.fetch("backend"),
-            "entitlement_group" => row.fetch("entitlement_group"),
-            "username" => row.fetch("username")
+            "backend" => row.fetch(:backend),
+            "entitlement_group" => row.fetch(:entitlement_group),
+            "username" => row.fetch(:username)
           }
         end
       end

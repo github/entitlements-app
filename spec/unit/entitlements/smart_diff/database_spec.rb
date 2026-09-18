@@ -43,15 +43,15 @@ describe Entitlements::SmartDiff::Database do
       described_class.write(path: path, result: result)
 
       described_class.read(path) do |db|
-        expect(db.get_first_value("PRAGMA integrity_check")).to eq("ok")
-        expect(db.get_first_value("SELECT schema_version FROM metadata")).to eq(1)
-        expect(db.get_first_value("SELECT count(*) FROM membership_changes")).to eq(2)
-        expect(db.get_first_value(<<~SQL)).to eq("US")
+        expect(db.query_single_splat("PRAGMA integrity_check")).to eq("ok")
+        expect(db.query_single_splat("SELECT schema_version FROM metadata")).to eq(1)
+        expect(db.query_single_splat("SELECT count(*) FROM membership_changes")).to eq(2)
+        expect(db.query_single_splat(<<~SQL)).to eq("US")
           SELECT json_extract(head_attributes_json, '$.country')
           FROM change_context
           WHERE username = 'alice'
         SQL
-        expect(db.get_first_value("SELECT count(*) FROM policy_result")).to eq(0)
+        expect(db.query_single_splat("SELECT count(*) FROM policy_result")).to eq(0)
       end
 
       markdown = described_class.markdown(path: path, limit: 1)
