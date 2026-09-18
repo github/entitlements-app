@@ -10,7 +10,7 @@ PATH
       octokit (~> 4.18)
       optimist (~> 3.1)
       ostruct (~> 0.6.0)
-      sqlite3 (~> 1.7)
+      sqlite3 (~> 2.8.1)
 
 GEM
   remote: https://rubygems.org/
@@ -139,9 +139,9 @@ GEM
       simplecov (< 1.0)
     simplecov-html (0.12.3)
     simplecov_json_formatter (0.1.4)
-    sqlite3 (1.7.3)
+    sqlite3 (2.8.1)
       mini_portile2 (~> 2.8.0)
-    sqlite3 (1.7.3-x86_64-linux)
+    sqlite3 (2.8.1-x86_64-linux-gnu)
     stringio (3.1.4)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)

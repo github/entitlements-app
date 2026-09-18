@@ -130,30 +130,36 @@ module Entitlements
       def self.insert_result(db, result)
         db.execute(
           "INSERT INTO metadata (id, schema_version, evaluated_at, scoped) VALUES (1, ?, ?, ?)",
-          result.fetch("schema_version"),
-          result.fetch("base").fetch("evaluated_at"),
-          result.key?("scope") ? 1 : 0
+          [
+            result.fetch("schema_version"),
+            result.fetch("base").fetch("evaluated_at"),
+            result.key?("scope") ? 1 : 0
+          ]
         )
         %w[base head].each do |snapshot|
           metadata = result.fetch(snapshot)
           db.execute(
             "INSERT INTO snapshots (snapshot, source_sha, people_snapshot_sha256) VALUES (?, ?, ?)",
-            snapshot,
-            metadata.fetch("source_sha"),
-            metadata.fetch("people_snapshot_sha256")
+            [
+              snapshot,
+              metadata.fetch("source_sha"),
+              metadata.fetch("people_snapshot_sha256")
+            ]
           )
         end
         result.fetch("scope", {}).fetch("affected_groups", []).each do |group|
-          db.execute("INSERT INTO affected_groups (entitlement_group) VALUES (?)", group)
+          db.execute("INSERT INTO affected_groups (entitlement_group) VALUES (?)", [group])
         end
         {"gain" => "gains", "loss" => "losses"}.each do |change_type, key|
           result.fetch(key).each do |record|
             db.execute(
               "INSERT INTO membership_changes (change_type, backend, entitlement_group, username) VALUES (?, ?, ?, ?)",
-              change_type,
-              record.fetch("backend"),
-              record.fetch("entitlement_group"),
-              record.fetch("username")
+              [
+                change_type,
+                record.fetch("backend"),
+                record.fetch("entitlement_group"),
+                record.fetch("username")
+              ]
             )
           end
         end
@@ -161,9 +167,11 @@ module Entitlements
           people.each do |record|
             db.execute(
               "INSERT INTO people (snapshot, username, attributes_json) VALUES (?, ?, ?)",
-              snapshot,
-              record.fetch("username"),
-              JSON.generate(record.fetch("attributes"))
+              [
+                snapshot,
+                record.fetch("username"),
+                JSON.generate(record.fetch("attributes"))
+              ]
             )
           end
         end
@@ -202,7 +210,7 @@ module Entitlements
       private_class_method :result_from
 
       def self.membership_changes(db, change_type)
-        rows = db.execute(<<~SQL, change_type)
+        rows = db.execute(<<~SQL, [change_type])
           SELECT backend, entitlement_group, username
           FROM membership_changes
           WHERE change_type = ?

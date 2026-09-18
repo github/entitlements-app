@@ -24,7 +24,7 @@ Gem::Specification.new do |s|
   s.add_dependency "optimist", "~> 3.1"
   s.add_dependency "ostruct", "~> 0.6.0"
   s.add_dependency "logger", "~> 1.6"
-  s.add_dependency "sqlite3", "~> 1.7"
+  s.add_dependency "sqlite3", "~> 2.8.1"
 
   s.add_development_dependency "debug", "<= 1.8.0"
   s.add_development_dependency "rake", "~> 13.2", ">= 13.2.1"
