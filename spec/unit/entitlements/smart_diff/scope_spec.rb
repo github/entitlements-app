@@ -17,6 +17,108 @@ describe Entitlements::SmartDiff::Scope do
     )).to eq([])
   end
 
+  it "fails for changed entitlement files without a supported extension" do
+    Dir.mktmpdir do |base|
+      Dir.mktmpdir do |head|
+        copy_fixture(base)
+        copy_fixture(head)
+        File.write(File.join(head, "groups", "teams", "no-extension"), "username = Alice\n")
+
+        expect do
+          described_class.affected_groups(
+            base_config: File.join(base, "config.yaml"),
+            head_config: File.join(head, "config.yaml"),
+            base_tree: base,
+            head_tree: head,
+            evaluated_at: "2026-09-02T19:58:54Z"
+          )
+        end.to raise_error(ArgumentError, /groups\/teams\/no-extension has no extension/)
+
+        FileUtils.rm(File.join(head, "groups", "teams", "no-extension"))
+        File.write(File.join(head, "groups", "teams", "unsupported.json"), "{}")
+        expect do
+          described_class.affected_groups(
+            base_config: File.join(base, "config.yaml"),
+            head_config: File.join(head, "config.yaml"),
+            base_tree: base,
+            head_tree: head,
+            evaluated_at: "2026-09-02T19:58:54Z"
+          )
+        end.to raise_error(ArgumentError, /groups\/teams\/unsupported.json has unsupported extension ".json"/)
+      end
+    end
+  end
+
+  it "evaluates every cataloged group when identity sources change" do
+    affected = described_class.affected_groups(
+      base_config: fixture("smart-diff/config.yaml"),
+      head_config: fixture("smart-diff/config.yaml"),
+      base_tree: fixture("smart-diff"),
+      head_tree: fixture("smart-diff"),
+      evaluated_at: "2026-09-02T19:58:54Z",
+      identity_sources_changed: true
+    )
+
+    expect(affected).to include(
+      "internal/engineers",
+      "teams/direct",
+      "teams/filtered",
+      "teams_mirror/direct",
+      "teams_mirror/filtered"
+    )
+  end
+
+  it "globally validates unchanged supported entitlement files" do
+    Dir.mktmpdir do |base|
+      Dir.mktmpdir do |head|
+        copy_fixture(base)
+        copy_fixture(head)
+        [base, head].each do |tree|
+          File.write(File.join(tree, "groups", "teams", "invalid.txt"), "description = Missing rules\n")
+        end
+
+        expect do
+          described_class.affected_groups(
+            base_config: File.join(base, "config.yaml"),
+            head_config: File.join(head, "config.yaml"),
+            base_tree: base,
+            head_tree: head,
+            evaluated_at: "2026-09-02T19:58:54Z",
+            identity_sources_changed: true
+          )
+        end.to raise_error(RuntimeError, /No conditions were found in .*invalid.txt/)
+      end
+    end
+  end
+
+  it "keeps inline predicate and contradictory filter validation fail closed" do
+    {
+      "invalid-predicate.txt" => "username = Alice; expiration 2029-09-10\n",
+      "contradictory-filter.txt" => "username = Alice\nfilter_contractors = all\nfilter_contractors = internal/contractors\n"
+    }.each do |filename, content|
+      Dir.mktmpdir do |base|
+        Dir.mktmpdir do |head|
+          copy_fixture(base)
+          copy_fixture(head)
+          [base, head].each do |tree|
+            File.write(File.join(tree, "groups", "teams", filename), content)
+          end
+
+          expect do
+            described_class.affected_groups(
+              base_config: File.join(base, "config.yaml"),
+              head_config: File.join(head, "config.yaml"),
+              base_tree: base,
+              head_tree: head,
+              evaluated_at: "2026-09-02T19:58:54Z",
+              identity_sources_changed: true
+            )
+          end.to raise_error(/#{Regexp.escape(filename)}/)
+        end
+      end
+    end
+  end
+
   it "includes changed groups, static dependents, and mirrors" do
     Dir.mktmpdir do |base|
       Dir.mktmpdir do |head|

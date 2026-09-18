@@ -8,10 +8,13 @@ module Entitlements
     class Scope
       GROUP_FILE_EXTENSIONS = %w[.rb .txt .yaml].freeze
 
-      def self.affected_groups(base_config:, head_config:, base_tree:, head_tree:, evaluated_at:)
+      def self.affected_groups(base_config:, head_config:, base_tree:, head_tree:, evaluated_at:, identity_sources_changed: false)
         base = catalog(config_file: base_config, tree: base_tree, evaluated_at: evaluated_at)
         head = catalog(config_file: head_config, tree: head_tree, evaluated_at: evaluated_at)
         all_groups = base.fetch(:groups) | head.fetch(:groups)
+        validate_changed_paths!(base, head)
+        return all_groups.to_a.sort if identity_sources_changed
+
         changed_groups = changed_groups(base, head)
         reverse_dependencies = reverse_dependencies(base, head, all_groups)
 
@@ -29,6 +32,7 @@ module Entitlements
         Entitlements.register_filters if Entitlements.config.key?("filters")
         groups = Set.new
         files = {}
+        entitlement_files = {}
         path_groups = Hash.new { |hash, key| hash[key] = Set.new }
         references = Hash.new { |hash, key| hash[key] = Set.new }
         mirrors = []
@@ -47,10 +51,11 @@ module Entitlements
           Dir.children(group_path).sort.each do |basename|
             filename = File.join(group_path, basename)
             next unless File.file?(filename)
+            relative_path = relative_path(filename, tree)
+            entitlement_files[relative_path] = Digest::SHA256.file(filename).hexdigest
             next unless GROUP_FILE_EXTENSIONS.include?(File.extname(filename))
 
             group_id = "#{group_name}/#{File.basename(filename, File.extname(filename))}"
-            relative_path = relative_path(filename, tree)
             groups.add(group_id)
             path_groups[relative_path].add(group_id)
             files[relative_path] = Digest::SHA256.file(filename).hexdigest
@@ -60,6 +65,7 @@ module Entitlements
               filename: filename,
               config: group_config
             )
+            validate_ruleset!(ruleset)
             collect_group_references(ruleset.send(:rules), references[group_id])
             collect_filter_references(ruleset, filename, references[group_id])
           end
@@ -76,6 +82,7 @@ module Entitlements
         {
           config_digest: Digest::SHA256.file(config_file).hexdigest,
           files: files,
+          entitlement_files: entitlement_files,
           groups: groups,
           path_groups: path_groups,
           references: references
@@ -85,6 +92,28 @@ module Entitlements
         original_dir ? ENV["DIR"] = original_dir : ENV.delete("DIR")
       end
       private_class_method :catalog
+
+      def self.validate_ruleset!(ruleset)
+        ruleset.send(:rules)
+        ruleset.filters
+        ruleset.metadata
+        ruleset.modifiers
+        ruleset.schema_version if ruleset.respond_to?(:schema_version)
+      end
+      private_class_method :validate_ruleset!
+
+      def self.validate_changed_paths!(base, head)
+        paths = base.fetch(:entitlement_files).keys | head.fetch(:entitlement_files).keys
+        paths.each do |path|
+          next if base.fetch(:entitlement_files)[path] == head.fetch(:entitlement_files)[path]
+          next if GROUP_FILE_EXTENSIONS.include?(File.extname(path))
+
+          extension = File.extname(path)
+          detail = extension.empty? ? "has no extension" : "has unsupported extension #{extension.inspect}"
+          raise ArgumentError, "Changed entitlement file #{path} #{detail}; expected .rb, .txt, or .yaml"
+        end
+      end
+      private_class_method :validate_changed_paths!
 
       def self.collect_group_references(value, result)
         case value

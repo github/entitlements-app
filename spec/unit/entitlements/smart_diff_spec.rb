@@ -118,6 +118,127 @@ describe Entitlements::SmartDiff do
     expect(unscoped).not_to have_key("scope")
   end
 
+  it "permits different people snapshots with the same frozen evaluation time" do
+    result, = described_class.compare(
+      base: base,
+      head: head.merge("people_snapshot_sha256" => "different")
+    )
+
+    expect(result.dig("base", "people_snapshot_sha256")).to eq("people")
+    expect(result.dig("head", "people_snapshot_sha256")).to eq("different")
+  end
+
+  it "builds independent tree identity snapshots and diffs identity-only changes" do
+    Dir.mktmpdir do |base_tree|
+      Dir.mktmpdir do |head_tree|
+        [base_tree, head_tree].each do |tree|
+          FileUtils.cp_r(Dir.glob(File.join(fixture("smart-diff"), "*")), tree)
+          FileUtils.mkdir_p(File.join(tree, "config"))
+          FileUtils.mkdir_p(File.join(tree, "external"))
+          File.write(File.join(tree, "groups", "teams", "identity.txt"), "username = new-user\n")
+          File.write(File.join(tree, "config", "workday-overrides.yaml"), YAML.dump({}))
+        end
+        File.write(File.join(base_tree, "config", "workday.yaml"), YAML.dump({"Alice" => {"manager" => "Alice"}}))
+        File.write(File.join(head_tree, "config", "workday.yaml"), YAML.dump({
+          "Alice" => {"manager" => "Alice"},
+          "new-user" => {"manager" => "Alice"}
+        }))
+
+        result, = described_class.run(
+          base_config: File.join(base_tree, "config.yaml"),
+          head_config: File.join(head_tree, "config.yaml"),
+          base_sha: "a" * 40,
+          head_sha: "b" * 40,
+          evaluated_at: "2026-09-02T19:58:54Z",
+          base_tree: base_tree,
+          head_tree: head_tree
+        )
+
+        expect(result["gains"]).to include(
+          "backend" => "dummy",
+          "entitlement_group" => "teams/identity",
+          "username" => "new-user"
+        )
+        expect(result.dig("base", "people_snapshot_sha256")).not_to eq(result.dig("head", "people_snapshot_sha256"))
+        expect(result.dig("base", "evaluated_at")).to eq(result.dig("head", "evaluated_at"))
+        expect(result.dig("scope", "affected_groups")).to include("teams/identity", "teams_mirror/identity")
+      end
+    end
+  end
+
+  it "diffs external and override identity changes with normal precedence semantics" do
+    scenarios = {
+      "external addition" => lambda do |_base, head|
+        File.write(File.join(head, "external", "users.yaml"), YAML.dump({"target" => {"manager" => "Alice"}}))
+      end,
+      "override addition" => lambda do |_base, head|
+        File.write(File.join(head, "config", "workday-overrides.yaml"), YAML.dump({
+          "additions" => {"target" => {"manager" => "Alice"}}
+        }))
+      end,
+      "override removal" => lambda do |_base, head|
+        File.write(File.join(head, "config", "workday-overrides.yaml"), YAML.dump({"removals" => ["target"]}))
+      end,
+      "override replacement" => lambda do |_base, head|
+        File.write(File.join(head, "config", "workday-overrides.yaml"), YAML.dump({
+          "replacements" => {"target" => {"manager" => "Alice"}}
+        }))
+      end
+    }
+
+    scenarios.each do |name, mutate|
+      Dir.mktmpdir do |base_tree|
+        Dir.mktmpdir do |head_tree|
+          [base_tree, head_tree].each do |tree|
+            FileUtils.cp_r(Dir.glob(File.join(fixture("smart-diff"), "*")), tree)
+            FileUtils.mkdir_p(File.join(tree, "config"))
+            FileUtils.mkdir_p(File.join(tree, "external"))
+            if name == "override replacement"
+              File.write(File.join(tree, "groups", "teams", "identity.rb"), <<~RUBY)
+                module Entitlements
+                  class Rule
+                    class Teams
+                      class Identity < Entitlements::Rule::Base
+                        def members
+                          person = Entitlements.cache[:people_obj].read("target")
+                          person["manager"] == "Alice" ? Set.new([person]) : Set.new
+                        end
+                      end
+                    end
+                  end
+                end
+              RUBY
+            else
+              File.write(File.join(tree, "groups", "teams", "identity.txt"), "username = target\n")
+            end
+            File.write(File.join(tree, "config", "workday-overrides.yaml"), YAML.dump({}))
+            people = {"Alice" => {"manager" => "Alice"}}
+            people["target"] = {"manager" => "Bob"} unless name.include?("addition")
+            File.write(File.join(tree, "config", "workday.yaml"), YAML.dump(people))
+          end
+          mutate.call(base_tree, head_tree)
+
+          result, = described_class.run(
+            base_config: File.join(base_tree, "config.yaml"),
+            head_config: File.join(head_tree, "config.yaml"),
+            base_sha: "a" * 40,
+            head_sha: "b" * 40,
+            evaluated_at: "2026-09-02T19:58:54Z",
+            base_tree: base_tree,
+            head_tree: head_tree
+          )
+
+          changed = result["gains"] + result["losses"]
+          expect(changed).to include(
+            "backend" => "dummy",
+            "entitlement_group" => "teams/identity",
+            "username" => "target"
+          ), name
+        end
+      end
+    end
+  end
+
   it "isolates Ruby state between base and head snapshot processes" do
     Dir.mktmpdir do |base_tree|
       Dir.mktmpdir do |head_tree|
@@ -241,7 +362,6 @@ describe Entitlements::SmartDiff do
     expect { described_class.compare(base: base.merge("schema_version" => 2), head: head) }.to raise_error(ArgumentError, /schema version/)
     expect { described_class.compare(base: base.reject { |key| key == "source_sha" }, head: head) }.to raise_error(ArgumentError, /missing source_sha/)
     expect { described_class.compare(base: base.merge("memberships" => {}), head: head) }.to raise_error(ArgumentError, /must be an array/)
-    expect { described_class.compare(base: base, head: head.merge("people_snapshot_sha256" => "other")) }.to raise_error(ArgumentError, /people snapshots/)
     expect { described_class.compare(base: base, head: head.merge("evaluated_at" => "other")) }.to raise_error(ArgumentError, /evaluation timestamps/)
     expect { described_class.compare(base: base, head: head, markdown_limit: 0) }.to raise_error(ArgumentError, /markdown_limit/)
     expect { described_class.compare(base: base.merge("memberships" => ["bad"]), head: head) }.to raise_error(ArgumentError, /Invalid membership/)

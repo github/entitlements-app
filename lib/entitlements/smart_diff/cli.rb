@@ -15,7 +15,9 @@ module Entitlements
           head_config: config_path(options.fetch(:head_tree), options[:head_config]),
           base_sha: options.fetch(:base_sha),
           head_sha: options.fetch(:head_sha),
-          people_source: options.fetch(:people_snapshot),
+          people_source: options[:people_snapshot],
+          base_people_source: options[:base_people_snapshot],
+          head_people_source: options[:head_people_snapshot],
           evaluated_at: options.fetch(:evaluated_at),
           base_tree: options.fetch(:base_tree),
           head_tree: options.fetch(:head_tree),
@@ -44,6 +46,8 @@ module Entitlements
           opts.on("--base-sha SHA") { |value| options[:base_sha] = value }
           opts.on("--head-sha SHA") { |value| options[:head_sha] = value }
           opts.on("--people-snapshot PATH") { |value| options[:people_snapshot] = value }
+          opts.on("--base-people-snapshot PATH") { |value| options[:base_people_snapshot] = value }
+          opts.on("--head-people-snapshot PATH") { |value| options[:head_people_snapshot] = value }
           opts.on("--evaluated-at TIMESTAMP") { |value| options[:evaluated_at] = value }
           opts.on("--json PATH") { |value| options[:json] = value }
           opts.on("--markdown PATH") { |value| options[:markdown] = value }
@@ -51,9 +55,13 @@ module Entitlements
           opts.on("--require FEATURE") { |value| options[:required_features] << value }
         end
         parser.parse!(argv)
-        required = %i[base_tree head_tree base_sha head_sha people_snapshot evaluated_at json markdown]
+        required = %i[base_tree head_tree base_sha head_sha evaluated_at json markdown]
         missing = required.reject { |key| options.key?(key) }
         raise OptionParser::MissingArgument, missing.join(", ") if missing.any?
+        separate_snapshots = options.key?(:base_people_snapshot) || options.key?(:head_people_snapshot)
+        if separate_snapshots && !(options.key?(:base_people_snapshot) && options.key?(:head_people_snapshot))
+          raise OptionParser::MissingArgument, "base_people_snapshot, head_people_snapshot"
+        end
         options
       end
       private_class_method :parse

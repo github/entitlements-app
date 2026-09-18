@@ -8,20 +8,32 @@ module Entitlements
     class SnapshotWorker
       def self.run(input: $stdin, output: $stdout, error: $stderr)
         request = JSON.parse(input.read)
-        snapshot = Entitlements::DesiredGroups.export(
-          config_file: request.fetch("config_file"),
-          source_sha: request.fetch("source_sha"),
-          people_source: request.fetch("people_source"),
-          evaluated_at: request.fetch("evaluated_at"),
-          tree_root: request["tree_root"],
-          entitlement_groups: request["entitlement_groups"]
-        )
+        people_source = request["people_source"]
+        snapshot = if people_source
+                     export(request, people_source)
+                   else
+                     Entitlements::SmartDiff::IdentitySnapshot.with_file(request.fetch("tree_root")) do |path|
+                       export(request, path)
+                     end
+                   end
         output.write(JSON.generate(snapshot))
         0
       rescue StandardError => e
         error.puts "#{e.class}: #{e.message}"
         1
       end
+
+      def self.export(request, people_source)
+        Entitlements::DesiredGroups.export(
+          config_file: request.fetch("config_file"),
+          source_sha: request.fetch("source_sha"),
+          people_source: people_source,
+          evaluated_at: request.fetch("evaluated_at"),
+          tree_root: request["tree_root"],
+          entitlement_groups: request["entitlement_groups"]
+        )
+      end
+      private_class_method :export
     end
   end
 end

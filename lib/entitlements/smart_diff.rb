@@ -5,6 +5,7 @@ require "json"
 require "open3"
 require "rbconfig"
 require "set"
+require_relative "smart_diff/identity_snapshot"
 require_relative "smart_diff/scope"
 
 module Entitlements
@@ -14,18 +15,30 @@ module Entitlements
     LIMITATION = "This compares desired entitlement-group membership. It does not predict provider-specific roles, " \
       "resource mappings, drift, invitations, JIT sessions, or API operations."
 
-    def self.run(base_config:, head_config:, base_sha:, head_sha:, people_source:, evaluated_at:, base_tree: nil, head_tree: nil, markdown_limit: DEFAULT_MARKDOWN_LIMIT, required_features: [])
+    def self.run(base_config:, head_config:, base_sha:, head_sha:, evaluated_at:, people_source: nil, base_people_source: nil, head_people_source: nil, base_tree: nil, head_tree: nil, markdown_limit: DEFAULT_MARKDOWN_LIMIT, required_features: [])
+      base_people_source ||= people_source
+      head_people_source ||= people_source
+      identity_sources_changed = if base_tree && head_tree
+                                   if base_people_source && head_people_source
+                                     Digest::SHA256.file(base_people_source).hexdigest != Digest::SHA256.file(head_people_source).hexdigest
+                                   else
+                                     Entitlements::SmartDiff::IdentitySnapshot.sources_changed?(
+                                       base_tree: base_tree,
+                                       head_tree: head_tree
+                                     )
+                                   end
+                                 end
       affected_groups = if base_tree && head_tree
                           Entitlements::SmartDiff::Scope.affected_groups(
                             base_config: base_config,
                             head_config: head_config,
                             base_tree: base_tree,
                             head_tree: head_tree,
-                            evaluated_at: evaluated_at
+                            evaluated_at: evaluated_at,
+                            identity_sources_changed: identity_sources_changed
                           )
                         end
       common = {
-        people_source: people_source,
         evaluated_at: evaluated_at,
         required_features: required_features
       }
@@ -35,6 +48,7 @@ module Entitlements
           source_sha: base_sha,
           tree_root: base_tree,
           entitlement_groups: affected_groups,
+          people_source: base_people_source,
           **common
         },
         "head" => {
@@ -42,6 +56,7 @@ module Entitlements
           source_sha: head_sha,
           tree_root: head_tree,
           entitlement_groups: affected_groups,
+          people_source: head_people_source,
           **common
         }
       )
@@ -56,7 +71,6 @@ module Entitlements
     def self.compare(base:, head:, markdown_limit: DEFAULT_MARKDOWN_LIMIT, affected_groups: nil)
       validate_snapshot!(base, "base")
       validate_snapshot!(head, "head")
-      raise ArgumentError, "Base and head used different people snapshots" unless base["people_snapshot_sha256"] == head["people_snapshot_sha256"]
       raise ArgumentError, "Base and head used different evaluation timestamps" unless base["evaluated_at"] == head["evaluated_at"]
       raise ArgumentError, "markdown_limit must be a positive integer" unless markdown_limit.is_a?(Integer) && markdown_limit.positive?
 
@@ -134,7 +148,9 @@ module Entitlements
           "#{membership_count(result.fetch('counts').fetch('losses'))} removed.**",
         "",
         "Base: `#{result.fetch('base').fetch('source_sha')}`  ",
-        "Head: `#{result.fetch('head').fetch('source_sha')}`",
+        "Base identity: `#{result.fetch('base').fetch('people_snapshot_sha256')}`  ",
+        "Head: `#{result.fetch('head').fetch('source_sha')}`  ",
+        "Head identity: `#{result.fetch('head').fetch('people_snapshot_sha256')}`",
         ""
       ]
       if result["scope"]

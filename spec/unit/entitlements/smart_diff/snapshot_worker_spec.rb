@@ -44,4 +44,34 @@ describe Entitlements::SmartDiff::SnapshotWorker do
     expect(output.string).to be_empty
     expect(error.string).to include("KeyError")
   end
+
+  it "builds a canonical tree snapshot when no snapshot file is supplied" do
+    snapshot = {
+      "schema_version" => 1,
+      "source_sha" => "a" * 40,
+      "people_snapshot_sha256" => "people",
+      "evaluated_at" => "2026-09-02T19:58:54Z",
+      "memberships" => []
+    }
+    request = {
+      "config_file" => "/base/config.yaml",
+      "source_sha" => "a" * 40,
+      "evaluated_at" => "2026-09-02T19:58:54Z",
+      "tree_root" => "/base",
+      "entitlement_groups" => []
+    }
+    allow(Entitlements::SmartDiff::IdentitySnapshot).to receive(:with_file).with("/base").and_yield("/tmp/people.yaml")
+    expect(Entitlements::DesiredGroups).to receive(:export).with(
+      config_file: "/base/config.yaml",
+      source_sha: "a" * 40,
+      people_source: "/tmp/people.yaml",
+      evaluated_at: "2026-09-02T19:58:54Z",
+      tree_root: "/base",
+      entitlement_groups: []
+    ).and_return(snapshot)
+    output = StringIO.new
+
+    expect(described_class.run(input: StringIO.new(JSON.generate(request)), output: output, error: StringIO.new)).to eq(0)
+    expect(JSON.parse(output.string)).to eq(snapshot)
+  end
 end
