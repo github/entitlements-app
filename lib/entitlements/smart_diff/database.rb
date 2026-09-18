@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "json"
 require "fileutils"
 require "extralite"
 
@@ -38,24 +37,18 @@ module Entitlements
         CREATE TABLE people (
           snapshot TEXT NOT NULL CHECK (snapshot IN ('base', 'head')),
           username TEXT NOT NULL,
-          attributes_json TEXT NOT NULL CHECK (json_valid(attributes_json)),
           PRIMARY KEY (snapshot, username),
           FOREIGN KEY (snapshot) REFERENCES snapshots(snapshot)
         );
 
-        CREATE VIEW change_context AS
-        SELECT
-          changes.change_type,
-          changes.backend,
-          changes.entitlement_group,
-          changes.username,
-          base_people.attributes_json AS base_attributes_json,
-          head_people.attributes_json AS head_attributes_json
-        FROM membership_changes AS changes
-        LEFT JOIN people AS base_people
-          ON base_people.snapshot = 'base' AND base_people.username = changes.username
-        LEFT JOIN people AS head_people
-          ON head_people.snapshot = 'head' AND head_people.username = changes.username;
+        CREATE TABLE person_facts (
+          snapshot TEXT NOT NULL CHECK (snapshot IN ('base', 'head')),
+          username TEXT NOT NULL,
+          attribute TEXT NOT NULL,
+          value TEXT NOT NULL,
+          PRIMARY KEY (snapshot, username, attribute, value),
+          FOREIGN KEY (snapshot, username) REFERENCES people(snapshot, username)
+        );
       SQL
 
       def self.write(path:, result:)
@@ -115,15 +108,35 @@ module Entitlements
         result.fetch("people").each do |snapshot, people|
           people.each do |record|
             db.execute(
-              "INSERT INTO people (snapshot, username, attributes_json) VALUES (?, ?, ?)",
+              "INSERT INTO people (snapshot, username) VALUES (?, ?)",
               snapshot,
-              record.fetch("username"),
-              JSON.generate(record.fetch("attributes"))
+              record.fetch("username")
             )
+            record.fetch("attributes").each do |attribute, value|
+              fact_values(value, username: record.fetch("username"), attribute: attribute).each do |fact_value|
+                db.execute(
+                  "INSERT INTO person_facts (snapshot, username, attribute, value) VALUES (?, ?, ?, ?)",
+                  snapshot,
+                  record.fetch("username"),
+                  attribute,
+                  fact_value
+                )
+              end
+            end
           end
         end
       end
       private_class_method :insert_result
+
+      def self.fact_values(value, username:, attribute:)
+        values = value.is_a?(Array) ? value : [value]
+        if values.any? { |item| item.is_a?(Array) || item.is_a?(Hash) }
+          raise ArgumentError, "Identity attribute #{attribute.inspect} for #{username} must contain scalar values"
+        end
+
+        values.compact.map(&:to_s).uniq
+      end
+      private_class_method :fact_values
 
       def self.result_from(db)
         metadata = db.query_single("SELECT schema_version, evaluated_at, scoped FROM metadata WHERE id = 1")

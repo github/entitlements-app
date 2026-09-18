@@ -47,16 +47,28 @@ describe Entitlements::SmartDiff::Database do
         expect(db.query_single_splat("SELECT schema_version FROM metadata")).to eq(1)
         expect(db.query_single_splat("SELECT count(*) FROM membership_changes")).to eq(2)
         expect(db.query_single_splat(<<~SQL)).to eq("US")
-          SELECT json_extract(head_attributes_json, '$.country')
-          FROM change_context
-          WHERE username = 'alice'
+          SELECT value
+          FROM person_facts
+          WHERE snapshot = 'head' AND username = 'alice' AND attribute = 'country'
         SQL
         tables = db.query(<<~SQL).map { |row| row.fetch(:name) }
           SELECT name
           FROM sqlite_schema
           WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
         SQL
-        expect(tables).to contain_exactly("affected_groups", "membership_changes", "metadata", "people", "snapshots")
+        expect(tables).to contain_exactly(
+          "affected_groups",
+          "membership_changes",
+          "metadata",
+          "people",
+          "person_facts",
+          "snapshots"
+        )
+        expect(db.query_single_splat(<<~SQL)).to eq(1)
+          SELECT count(*)
+          FROM person_facts
+          WHERE snapshot = 'base' AND username = 'bob' AND attribute = 'status' AND value = 'employee'
+        SQL
       end
 
       markdown = described_class.markdown(path: path, limit: 1)
@@ -64,6 +76,21 @@ describe Entitlements::SmartDiff::Database do
       expect(markdown).to include("query the SQLite artifact")
       expect(markdown).to include("Base identity: `base-people`")
       expect(markdown).to include("Affected entitlement groups: 2")
+    end
+  end
+
+  it "fails closed on nested identity facts" do
+    nested_result = result.merge(
+      "people" => {
+        "base" => [{"username" => "alice", "attributes" => {"manager" => {"username" => "bob"}}}],
+        "head" => []
+      }
+    )
+
+    Dir.mktmpdir do |directory|
+      expect do
+        described_class.write(path: File.join(directory, "smart-diff.sqlite3"), result: nested_result)
+      end.to raise_error(ArgumentError, /Identity attribute "manager" for alice must contain scalar values/)
     end
   end
 
