@@ -56,50 +56,6 @@ module Entitlements
           ON base_people.snapshot = 'base' AND base_people.username = changes.username
         LEFT JOIN people AS head_people
           ON head_people.snapshot = 'head' AND head_people.username = changes.username;
-
-        CREATE TABLE policy_rules (
-          rule_id TEXT PRIMARY KEY,
-          decision TEXT NOT NULL CHECK (decision IN ('auto_approve', 'human_review')),
-          description TEXT NOT NULL
-        );
-
-        CREATE TABLE policy_matches (
-          change_type TEXT NOT NULL,
-          backend TEXT NOT NULL,
-          entitlement_group TEXT NOT NULL,
-          username TEXT NOT NULL,
-          rule_id TEXT NOT NULL,
-          PRIMARY KEY (change_type, backend, entitlement_group, username, rule_id),
-          FOREIGN KEY (change_type, backend, entitlement_group, username)
-            REFERENCES membership_changes(change_type, backend, entitlement_group, username),
-          FOREIGN KEY (rule_id) REFERENCES policy_rules(rule_id)
-        );
-
-        CREATE TABLE policy_evaluations (
-          change_type TEXT NOT NULL,
-          backend TEXT NOT NULL,
-          entitlement_group TEXT NOT NULL,
-          username TEXT NOT NULL,
-          decision TEXT NOT NULL CHECK (decision IN ('auto_approve', 'human_review')),
-          reason TEXT NOT NULL,
-          PRIMARY KEY (change_type, backend, entitlement_group, username),
-          FOREIGN KEY (change_type, backend, entitlement_group, username)
-            REFERENCES membership_changes(change_type, backend, entitlement_group, username)
-        );
-
-        CREATE TABLE policy_result (
-          id INTEGER PRIMARY KEY CHECK (id = 1),
-          policy_version INTEGER NOT NULL,
-          decision TEXT NOT NULL CHECK (decision IN ('auto_approve', 'human_review')),
-          evaluated_count INTEGER NOT NULL,
-          auto_approve_count INTEGER NOT NULL,
-          human_review_count INTEGER NOT NULL
-        );
-
-        CREATE TABLE policy_reasons (
-          position INTEGER PRIMARY KEY,
-          reason TEXT NOT NULL
-        );
       SQL
 
       def self.write(path:, result:)

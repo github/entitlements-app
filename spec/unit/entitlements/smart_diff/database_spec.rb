@@ -51,7 +51,12 @@ describe Entitlements::SmartDiff::Database do
           FROM change_context
           WHERE username = 'alice'
         SQL
-        expect(db.query_single_splat("SELECT count(*) FROM policy_result")).to eq(0)
+        tables = db.query(<<~SQL).map { |row| row.fetch(:name) }
+          SELECT name
+          FROM sqlite_schema
+          WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
+        SQL
+        expect(tables).to contain_exactly("affected_groups", "membership_changes", "metadata", "people", "snapshots")
       end
 
       markdown = described_class.markdown(path: path, limit: 1)
