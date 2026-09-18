@@ -10,7 +10,7 @@ module Entitlements
 
       def self.run(argv = ARGV)
         options = parse(argv)
-        result, markdown = Entitlements::SmartDiff.run(
+        result, = Entitlements::SmartDiff.run(
           base_config: config_path(options.fetch(:base_tree), options[:base_config]),
           head_config: config_path(options.fetch(:head_tree), options[:head_config]),
           base_sha: options.fetch(:base_sha),
@@ -24,7 +24,11 @@ module Entitlements
           markdown_limit: options.fetch(:markdown_limit),
           required_features: options.fetch(:required_features)
         )
-        File.write(options.fetch(:json), Entitlements::SmartDiff.json(result))
+        Entitlements::SmartDiff::Database.write(path: options.fetch(:sqlite), result: result)
+        markdown = Entitlements::SmartDiff::Database.markdown(
+          path: options.fetch(:sqlite),
+          limit: options.fetch(:markdown_limit)
+        )
         File.write(options.fetch(:markdown), markdown)
         0
       rescue KeyError, OptionParser::ParseError, ArgumentError, SystemCallError => e
@@ -49,13 +53,13 @@ module Entitlements
           opts.on("--base-people-snapshot PATH") { |value| options[:base_people_snapshot] = value }
           opts.on("--head-people-snapshot PATH") { |value| options[:head_people_snapshot] = value }
           opts.on("--evaluated-at TIMESTAMP") { |value| options[:evaluated_at] = value }
-          opts.on("--json PATH") { |value| options[:json] = value }
+          opts.on("--sqlite PATH") { |value| options[:sqlite] = value }
           opts.on("--markdown PATH") { |value| options[:markdown] = value }
           opts.on("--markdown-limit COUNT", Integer) { |value| options[:markdown_limit] = value }
           opts.on("--require FEATURE") { |value| options[:required_features] << value }
         end
         parser.parse!(argv)
-        required = %i[base_tree head_tree base_sha head_sha evaluated_at json markdown]
+        required = %i[base_tree head_tree base_sha head_sha evaluated_at sqlite markdown]
         missing = required.reject { |key| options.key?(key) }
         raise OptionParser::MissingArgument, missing.join(", ") if missing.any?
         separate_snapshots = options.key?(:base_people_snapshot) || options.key?(:head_people_snapshot)

@@ -10,6 +10,7 @@ describe Entitlements::SmartDiff::SnapshotWorker do
       "source_sha" => "a" * 40,
       "people_snapshot_sha256" => "people",
       "evaluated_at" => "2026-09-02T19:58:54Z",
+      "people" => {},
       "memberships" => []
     }
     input = StringIO.new(JSON.generate(
@@ -51,6 +52,7 @@ describe Entitlements::SmartDiff::SnapshotWorker do
       "source_sha" => "a" * 40,
       "people_snapshot_sha256" => "people",
       "evaluated_at" => "2026-09-02T19:58:54Z",
+      "people" => {},
       "memberships" => []
     }
     request = {

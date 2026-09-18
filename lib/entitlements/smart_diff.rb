@@ -6,6 +6,7 @@ require "open3"
 require "rbconfig"
 require "set"
 require_relative "smart_diff/identity_snapshot"
+require_relative "smart_diff/database"
 require_relative "smart_diff/scope"
 
 module Entitlements
@@ -82,6 +83,7 @@ module Entitlements
       head_memberships = indexed_memberships(head)
       gains = (head_memberships.keys - base_memberships.keys).sort.map { |identity| head_memberships.fetch(identity) }
       losses = (base_memberships.keys - head_memberships.keys).sort.map { |identity| base_memberships.fetch(identity) }
+      changed_usernames = (gains + losses).map { |record| record.fetch("username") }.to_set
 
       result = {
         "schema_version" => SCHEMA_VERSION,
@@ -89,7 +91,11 @@ module Entitlements
         "head" => snapshot_metadata(head),
         "counts" => {"gains" => gains.length, "losses" => losses.length},
         "gains" => gains,
-        "losses" => losses
+        "losses" => losses,
+        "people" => {
+          "base" => selected_people(base, changed_usernames),
+          "head" => selected_people(head, changed_usernames)
+        }
       }
       result["scope"] = {"affected_groups" => affected_groups} if affected_groups
       [result, markdown(result, limit: markdown_limit)]
@@ -135,10 +141,6 @@ module Entitlements
       results.to_h { |label, result, _error| [label, result] }
     end
     private_class_method :parallel_snapshots
-
-    def self.json(result)
-      JSON.pretty_generate(result) << "\n"
-    end
 
     def self.markdown(result, limit: DEFAULT_MARKDOWN_LIMIT)
       lines = [
@@ -191,7 +193,7 @@ module Entitlements
 
         remaining -= visible.length
         omitted = changes.length - visible.length
-        lines.concat(["_#{omitted} additional memberships omitted; see the JSON artifact._", ""]) if omitted.positive?
+        lines.concat(["_#{omitted} additional memberships omitted; query the SQLite artifact for the complete diff._", ""]) if omitted.positive?
         lines.concat(["</details>", ""])
       end
 
@@ -202,13 +204,14 @@ module Entitlements
     def self.validate_snapshot!(snapshot, label)
       raise ArgumentError, "#{label} snapshot must be a hash" unless snapshot.is_a?(Hash)
       raise ArgumentError, "#{label} snapshot has an unsupported schema version" unless snapshot["schema_version"] == Entitlements::DesiredGroups::SCHEMA_VERSION
-      %w[source_sha people_snapshot_sha256 evaluated_at memberships].each do |key|
+      %w[source_sha people_snapshot_sha256 evaluated_at people memberships].each do |key|
         raise ArgumentError, "#{label} snapshot is missing #{key}" unless snapshot.key?(key)
       end
       unless snapshot.fetch("source_sha").is_a?(String) && snapshot.fetch("source_sha").match?(/\A[0-9a-f]{7,64}\z/i)
         raise ArgumentError, "#{label} snapshot has an invalid source_sha"
       end
       raise ArgumentError, "#{label} memberships must be an array" unless snapshot["memberships"].is_a?(Array)
+      raise ArgumentError, "#{label} people must be a hash" unless snapshot["people"].is_a?(Hash)
     end
     private_class_method :validate_snapshot!
 
@@ -227,6 +230,16 @@ module Entitlements
       snapshot.slice("source_sha", "people_snapshot_sha256", "evaluated_at")
     end
     private_class_method :snapshot_metadata
+
+    def self.selected_people(snapshot, usernames)
+      snapshot.fetch("people").filter_map do |username, attributes|
+        next unless usernames.include?(username.downcase)
+        raise ArgumentError, "Invalid people attributes for #{username}" unless attributes.is_a?(Hash)
+
+        {"username" => username.downcase, "attributes" => attributes}
+      end.sort_by { |record| record.fetch("username") }
+    end
+    private_class_method :selected_people
 
     def self.scoped_snapshot(snapshot, affected_groups)
       included = affected_groups.to_set

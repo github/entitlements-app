@@ -33,6 +33,11 @@ describe Entitlements::DesiredGroups do
     expect(first["source_sha"]).to eq(source_sha)
     expect(first["people_snapshot_sha256"]).to eq(Digest::SHA256.file(people_source).hexdigest)
     expect(first["evaluated_at"]).to eq(evaluated_at)
+    expect(first["people"]).to eq(
+      "Alice" => {"manager" => "Alice"},
+      "bob" => {"manager" => "Alice"},
+      "contractor" => {"manager" => "Alice"}
+    )
     expect(first).not_to have_key("complete")
     expect(first).not_to have_key("warnings")
     expect(first["memberships"]).to eq(first["memberships"].sort_by(&:values))
@@ -74,6 +79,35 @@ describe Entitlements::DesiredGroups do
     expect { described_class.export(**args.merge(people_source: "missing")) }.to raise_error(ArgumentError, /people_source/)
     expect { described_class.export(**args.merge(source_sha: "nope")) }.to raise_error(ArgumentError, /source_sha/)
     expect { described_class.export(**args.merge(evaluated_at: "2026-09-02")) }.to raise_error(ArgumentError, /evaluated_at/)
+  end
+
+  it "normalizes exported identity facts and rejects malformed people data" do
+    Dir.mktmpdir do |directory|
+      normalized = File.join(directory, "normalized.yaml")
+      File.write(normalized, YAML.dump(
+        "alice" => {
+          "status" => ["employee"]
+        }
+      ))
+      result = described_class.export(**args.merge(people_source: normalized))
+      expect(result.fetch("people")).to eq(
+        "alice" => {
+          "status" => ["employee"]
+        }
+      )
+
+      invalid_root = File.join(directory, "invalid-root.yaml")
+      File.write(invalid_root, YAML.dump([]))
+      expect do
+        described_class.send(:people_snapshot, invalid_root)
+      end.to raise_error(ArgumentError, /must contain a hash/)
+
+      invalid_attributes = File.join(directory, "invalid-attributes.yaml")
+      File.write(invalid_attributes, YAML.dump("alice" => []))
+      expect do
+        described_class.send(:people_snapshot, invalid_attributes)
+      end.to raise_error(ArgumentError, /People attributes for alice must be a hash/)
+    end
   end
 
   it "rejects groups without stable backend identifiers" do

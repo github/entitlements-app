@@ -37,6 +37,7 @@ module Entitlements
         "source_sha" => source_sha.downcase,
         "people_snapshot_sha256" => people_hash,
         "evaluated_at" => evaluation_time.utc.iso8601,
+        "people" => people_snapshot(people_source),
         "memberships" => memberships
       }
     ensure
@@ -89,6 +90,17 @@ module Entitlements
       Entitlements.config["people_data_source"] = "smart_diff"
     end
     private_class_method :use_people_snapshot!
+
+    def self.people_snapshot(people_source)
+      data = YAML.safe_load_file(people_source, permitted_classes: [Date]) || {}
+      raise ArgumentError, "people_source must contain a hash" unless data.is_a?(Hash)
+
+      data.to_h do |username, attributes|
+        raise ArgumentError, "People attributes for #{username} must be a hash" unless attributes.is_a?(Hash)
+        [username.to_s, attributes.transform_keys(&:to_s)]
+      end
+    end
+    private_class_method :people_snapshot
 
     def self.export_memberships(backend_identifiers, entitlement_groups:)
       return export_all_memberships(backend_identifiers) unless entitlement_groups

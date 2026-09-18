@@ -12,6 +12,10 @@ describe Entitlements::SmartDiff do
       "source_sha" => "a" * 40,
       "people_snapshot_sha256" => "people",
       "evaluated_at" => "2026-09-02T19:58:54Z",
+      "people" => {
+        "alice" => {"manager" => "manager"},
+        "bob" => {"manager" => "manager"}
+      },
       "memberships" => [
         {"backend" => "dummy", "entitlement_group" => "teams/old", "username" => "alice"},
         {"backend" => "dummy", "entitlement_group" => "teams/same", "username" => "bob"}
@@ -24,6 +28,10 @@ describe Entitlements::SmartDiff do
       "source_sha" => "b" * 40,
       "people_snapshot_sha256" => "people",
       "evaluated_at" => "2026-09-02T19:58:54Z",
+      "people" => {
+        "<alice>" => {"country" => "US"},
+        "bob" => {"manager" => "manager"}
+      },
       "memberships" => [
         {"backend" => "dummy", "entitlement_group" => "teams/new\\|group", "username" => "<alice>"},
         {"backend" => "dummy", "entitlement_group" => "teams/same", "username" => "bob"}
@@ -46,7 +54,12 @@ describe Entitlements::SmartDiff do
     expect(markdown).to include("| Change | User | Entitlement group |")
     expect(markdown).not_to include("| User | Backend |")
     expect(markdown).to include(described_class::LIMITATION)
-    expect(described_class.json(result)).to end_with("\n")
+    expect(result.dig("people", "base")).to eq([
+      {"username" => "alice", "attributes" => {"manager" => "manager"}}
+    ])
+    expect(result.dig("people", "head")).to eq([
+      {"username" => "<alice>", "attributes" => {"country" => "US"}}
+    ])
   end
 
   it "renders empty output and deterministic truncation" do
