@@ -96,20 +96,7 @@ module Entitlements
     @statsd = nil
 
     reset_extras!
-    reset_rule_classes!
     Entitlements::Data::Groups::Calculated.reset!
-  end
-
-  # Remove classes loaded from Ruby entitlement files so separate evaluations cannot
-  # retain class-level descriptions, filters, metadata, or methods.
-  #
-  # Takes no arguments.
-  def self.reset_rule_classes!
-    return unless const_defined?(:Rule, false)
-
-    Entitlements::Rule.constants(false).each do |constant|
-      Entitlements::Rule.send(:remove_const, constant) unless constant == :Base
-    end
   end
 
   # Return the fixed time used for the current date-sensitive entitlement evaluation.
