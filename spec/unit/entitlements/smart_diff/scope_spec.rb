@@ -49,6 +49,27 @@ describe Entitlements::SmartDiff::Scope do
     end
   end
 
+  it "ignores changes to README.md and PR_TEMPLATE.md within a group directory" do
+    Dir.mktmpdir do |base|
+      Dir.mktmpdir do |head|
+        copy_fixture(base)
+        copy_fixture(head)
+        %w[README.md PR_TEMPLATE.md].each do |ignored_file|
+          File.write(File.join(base, "groups", "teams", ignored_file), "base copy\n")
+          File.write(File.join(head, "groups", "teams", ignored_file), "head copy\n")
+        end
+
+        expect(described_class.affected_groups(
+          base_config: File.join(base, "config.yaml"),
+          head_config: File.join(head, "config.yaml"),
+          base_tree: base,
+          head_tree: head,
+          evaluated_at: "2026-09-02T19:58:54Z"
+        )).to eq([])
+      end
+    end
+  end
+
   it "evaluates every cataloged group when identity sources change" do
     affected = described_class.affected_groups(
       base_config: fixture("smart-diff/config.yaml"),

@@ -51,6 +51,8 @@ module Entitlements
           Dir.children(group_path).sort.each do |basename|
             filename = File.join(group_path, basename)
             next unless File.file?(filename)
+            next if Entitlements::IGNORED_FILES.member?(basename)
+
             relative_path = relative_path(filename, tree)
             entitlement_files[relative_path] = Digest::SHA256.file(filename).hexdigest
             next unless GROUP_FILE_EXTENSIONS.include?(File.extname(filename))
