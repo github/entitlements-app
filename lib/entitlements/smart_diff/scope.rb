@@ -5,6 +5,7 @@ require "set"
 
 module Entitlements
   class SmartDiff
+    # Identifies the entitlement groups whose desired memberships may change between two source trees.
     class Scope
       GROUP_FILE_EXTENSIONS = %w[.rb .txt .yaml].freeze
 

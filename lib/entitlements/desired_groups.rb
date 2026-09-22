@@ -4,6 +4,7 @@ require "digest"
 require "json"
 
 module Entitlements
+  # Calculates desired group memberships from the provided configuration files.
   class DesiredGroups
     SCHEMA_VERSION = 1
 
