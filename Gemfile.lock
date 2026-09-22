@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    entitlements-app (1.2.4)
+    entitlements-app (1.2.5)
       concurrent-ruby (~> 1.3, >= 1.3.1)
       dogstatsd-ruby (~> 5.7)
       faraday (~> 2.0)
