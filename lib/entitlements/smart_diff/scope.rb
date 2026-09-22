@@ -22,76 +22,72 @@ module Entitlements
       end
 
       def self.catalog(config_file:, tree:, evaluated_at:)
-        original_dir = ENV["DIR"]
-        ENV["DIR"] = File.expand_path(tree)
-        Entitlements.reset!
-        Entitlements.config_file = config_file
-        groups_config = Entitlements.config.fetch("groups")
-        Entitlements.evaluation_time = Time.iso8601(evaluated_at.to_s)
-        Entitlements.load_extras if Entitlements.config.key?("extras")
-        Entitlements.register_filters if Entitlements.config.key?("filters")
-        groups = Set.new
-        files = {}
-        entitlement_files = {}
-        path_groups = Hash.new { |hash, key| hash[key] = Set.new }
-        references = Hash.new { |hash, key| hash[key] = Set.new }
-        mirrors = []
+        Entitlements.with_evaluation_context(
+          config_file: config_file,
+          evaluated_at: Time.iso8601(evaluated_at.to_s),
+          tree_root: tree
+        ) do |config|
+          groups_config = config.fetch("groups")
+          groups = Set.new
+          files = {}
+          entitlement_files = {}
+          path_groups = Hash.new { |hash, key| hash[key] = Set.new }
+          references = Hash.new { |hash, key| hash[key] = Set.new }
+          mirrors = []
 
-        groups_config.each do |group_name, group_config|
-          if group_config["mirror"]
-            mirrors << [group_name, group_config.fetch("mirror")]
-            next
+          groups_config.each do |group_name, group_config|
+            if group_config["mirror"]
+              mirrors << [group_name, group_config.fetch("mirror")]
+              next
+            end
+
+            begin
+              group_path = Entitlements::Util::Util.path_for_group(group_name)
+            rescue Errno::ENOENT
+              next
+            end
+            Dir.children(group_path).sort.each do |basename|
+              filename = File.join(group_path, basename)
+              next unless File.file?(filename)
+              next if Entitlements::IGNORED_FILES.member?(basename)
+
+              relative_path = relative_path(filename, tree)
+              entitlement_files[relative_path] = Digest::SHA256.file(filename).hexdigest
+              next unless GROUP_FILE_EXTENSIONS.include?(File.extname(filename))
+
+              group_id = "#{group_name}/#{File.basename(filename, File.extname(filename))}"
+              groups.add(group_id)
+              path_groups[relative_path].add(group_id)
+              files[relative_path] = Digest::SHA256.file(filename).hexdigest
+              next if File.extname(filename) == ".rb"
+
+              ruleset = Entitlements::Data::Groups::Calculated.ruleset(
+                filename: filename,
+                config: group_config
+              )
+              validate_ruleset!(ruleset)
+              collect_group_references(ruleset.send(:rules), references[group_id])
+              collect_filter_references(ruleset, filename, references[group_id])
+            end
           end
 
-          begin
-            group_path = Entitlements::Util::Util.path_for_group(group_name)
-          rescue Errno::ENOENT
-            next
+          mirrors.each do |mirror_name, source_name|
+            groups.select { |group_id| group_id.start_with?("#{source_name}/") }.each do |source_group|
+              mirror_group = "#{mirror_name}/#{source_group.delete_prefix("#{source_name}/")}"
+              groups.add(mirror_group)
+              references[mirror_group].add(source_group)
+            end
           end
-          Dir.children(group_path).sort.each do |basename|
-            filename = File.join(group_path, basename)
-            next unless File.file?(filename)
-            next if Entitlements::IGNORED_FILES.member?(basename)
 
-            relative_path = relative_path(filename, tree)
-            entitlement_files[relative_path] = Digest::SHA256.file(filename).hexdigest
-            next unless GROUP_FILE_EXTENSIONS.include?(File.extname(filename))
-
-            group_id = "#{group_name}/#{File.basename(filename, File.extname(filename))}"
-            groups.add(group_id)
-            path_groups[relative_path].add(group_id)
-            files[relative_path] = Digest::SHA256.file(filename).hexdigest
-            next if File.extname(filename) == ".rb"
-
-            ruleset = Entitlements::Data::Groups::Calculated.ruleset(
-              filename: filename,
-              config: group_config
-            )
-            validate_ruleset!(ruleset)
-            collect_group_references(ruleset.send(:rules), references[group_id])
-            collect_filter_references(ruleset, filename, references[group_id])
-          end
+          {
+            config_digest: Digest::SHA256.file(config_file).hexdigest,
+            files: files,
+            entitlement_files: entitlement_files,
+            groups: groups,
+            path_groups: path_groups,
+            references: references
+          }
         end
-
-        mirrors.each do |mirror_name, source_name|
-          groups.select { |group_id| group_id.start_with?("#{source_name}/") }.each do |source_group|
-            mirror_group = "#{mirror_name}/#{source_group.delete_prefix("#{source_name}/")}"
-            groups.add(mirror_group)
-            references[mirror_group].add(source_group)
-          end
-        end
-
-        {
-          config_digest: Digest::SHA256.file(config_file).hexdigest,
-          files: files,
-          entitlement_files: entitlement_files,
-          groups: groups,
-          path_groups: path_groups,
-          references: references
-        }
-      ensure
-        Entitlements.reset!
-        original_dir ? ENV["DIR"] = original_dir : ENV.delete("DIR")
       end
       private_class_method :catalog
 

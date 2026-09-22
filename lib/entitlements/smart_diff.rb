@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 require "cgi"
+require "digest"
 require "json"
 require "open3"
 require "rbconfig"
 require "set"
-require_relative "smart_diff/identity_snapshot"
 require_relative "smart_diff/database"
 require_relative "smart_diff/scope"
 
@@ -17,17 +17,13 @@ module Entitlements
       "resource mappings, drift, invitations, JIT sessions, or API operations."
 
     def self.run(base_config:, head_config:, base_sha:, head_sha:, evaluated_at:, people_source: nil, base_people_source: nil, head_people_source: nil, base_tree: nil, head_tree: nil, markdown_limit: DEFAULT_MARKDOWN_LIMIT, required_features: [])
-      base_people_source ||= people_source
-      head_people_source ||= people_source
+      base_people_source, head_people_source = people_sources(
+        people_source: people_source,
+        base_people_source: base_people_source,
+        head_people_source: head_people_source
+      )
       identity_sources_changed = if base_tree && head_tree
-                                   if base_people_source && head_people_source
-                                     Digest::SHA256.file(base_people_source).hexdigest != Digest::SHA256.file(head_people_source).hexdigest
-                                   else
-                                     Entitlements::SmartDiff::IdentitySnapshot.sources_changed?(
-                                       base_tree: base_tree,
-                                       head_tree: head_tree
-                                     )
-                                   end
+                                   Digest::SHA256.file(base_people_source).hexdigest != Digest::SHA256.file(head_people_source).hexdigest
                                  end
       affected_groups = if base_tree && head_tree
                           Entitlements::SmartDiff::Scope.affected_groups(
@@ -68,6 +64,21 @@ module Entitlements
         affected_groups: affected_groups
       )
     end
+
+    def self.people_sources(people_source:, base_people_source:, head_people_source:)
+      if people_source
+        if base_people_source || head_people_source
+          raise ArgumentError, "people_source cannot be combined with base_people_source or head_people_source"
+        end
+        return [people_source, people_source]
+      end
+      unless base_people_source && head_people_source
+        raise ArgumentError, "provide people_source or both base_people_source and head_people_source"
+      end
+
+      [base_people_source, head_people_source]
+    end
+    private_class_method :people_sources
 
     def self.compare(base:, head:, markdown_limit: DEFAULT_MARKDOWN_LIMIT, affected_groups: nil)
       validate_snapshot!(base, "base")

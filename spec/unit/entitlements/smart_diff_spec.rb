@@ -141,18 +141,17 @@ describe Entitlements::SmartDiff do
     expect(result.dig("head", "people_snapshot_sha256")).to eq("different")
   end
 
-  it "builds independent tree identity snapshots and diffs identity-only changes" do
+  it "diffs caller-supplied base and head people snapshots" do
     Dir.mktmpdir do |base_tree|
       Dir.mktmpdir do |head_tree|
         [base_tree, head_tree].each do |tree|
           FileUtils.cp_r(Dir.glob(File.join(fixture("smart-diff"), "*")), tree)
-          FileUtils.mkdir_p(File.join(tree, "config"))
-          FileUtils.mkdir_p(File.join(tree, "external"))
           File.write(File.join(tree, "groups", "teams", "identity.txt"), "username = new-user\n")
-          File.write(File.join(tree, "config", "workday-overrides.yaml"), YAML.dump({}))
         end
-        File.write(File.join(base_tree, "config", "workday.yaml"), YAML.dump({"Alice" => {"manager" => "Alice"}}))
-        File.write(File.join(head_tree, "config", "workday.yaml"), YAML.dump({
+        base_people = File.join(base_tree, "people.yaml")
+        head_people = File.join(head_tree, "people.yaml")
+        File.write(base_people, YAML.dump({"Alice" => {"manager" => "Alice"}}))
+        File.write(head_people, YAML.dump({
           "Alice" => {"manager" => "Alice"},
           "new-user" => {"manager" => "Alice"}
         }))
@@ -162,6 +161,8 @@ describe Entitlements::SmartDiff do
           head_config: File.join(head_tree, "config.yaml"),
           base_sha: "a" * 40,
           head_sha: "b" * 40,
+          base_people_source: base_people,
+          head_people_source: head_people,
           evaluated_at: "2026-09-02T19:58:54Z",
           base_tree: base_tree,
           head_tree: head_tree
@@ -179,77 +180,43 @@ describe Entitlements::SmartDiff do
     end
   end
 
-  it "diffs external and override identity changes with normal precedence semantics" do
-    scenarios = {
-      "external addition" => lambda do |_base, head|
-        File.write(File.join(head, "external", "users.yaml"), YAML.dump({"target" => {"manager" => "Alice"}}))
-      end,
-      "override addition" => lambda do |_base, head|
-        File.write(File.join(head, "config", "workday-overrides.yaml"), YAML.dump({
-          "additions" => {"target" => {"manager" => "Alice"}}
-        }))
-      end,
-      "override removal" => lambda do |_base, head|
-        File.write(File.join(head, "config", "workday-overrides.yaml"), YAML.dump({"removals" => ["target"]}))
-      end,
-      "override replacement" => lambda do |_base, head|
-        File.write(File.join(head, "config", "workday-overrides.yaml"), YAML.dump({
-          "replacements" => {"target" => {"manager" => "Alice"}}
-        }))
-      end
+  it "requires exactly one people snapshot mode" do
+    common = {
+      base_config: fixture("smart-diff/config.yaml"),
+      head_config: fixture("smart-diff/config.yaml"),
+      base_sha: "a" * 40,
+      head_sha: "b" * 40,
+      evaluated_at: "2026-09-02T19:58:54Z"
     }
 
-    scenarios.each do |name, mutate|
-      Dir.mktmpdir do |base_tree|
-        Dir.mktmpdir do |head_tree|
-          [base_tree, head_tree].each do |tree|
-            FileUtils.cp_r(Dir.glob(File.join(fixture("smart-diff"), "*")), tree)
-            FileUtils.mkdir_p(File.join(tree, "config"))
-            FileUtils.mkdir_p(File.join(tree, "external"))
-            if name == "override replacement"
-              File.write(File.join(tree, "groups", "teams", "identity.rb"), <<~RUBY)
-                module Entitlements
-                  class Rule
-                    class Teams
-                      class Identity < Entitlements::Rule::Base
-                        def members
-                          person = Entitlements.cache[:people_obj].read("target")
-                          person["manager"] == "Alice" ? Set.new([person]) : Set.new
-                        end
-                      end
-                    end
-                  end
-                end
-              RUBY
-            else
-              File.write(File.join(tree, "groups", "teams", "identity.txt"), "username = target\n")
-            end
-            File.write(File.join(tree, "config", "workday-overrides.yaml"), YAML.dump({}))
-            people = {"Alice" => {"manager" => "Alice"}}
-            people["target"] = {"manager" => "Bob"} unless name.include?("addition")
-            File.write(File.join(tree, "config", "workday.yaml"), YAML.dump(people))
-          end
-          mutate.call(base_tree, head_tree)
+    expect { described_class.run(**common) }
+      .to raise_error(ArgumentError, /provide people_source or both/)
+    expect do
+      described_class.run(**common, base_people_source: fixture("smart-diff/people.yaml"))
+    end.to raise_error(ArgumentError, /provide people_source or both/)
+    expect do
+      described_class.run(
+        **common,
+        people_source: fixture("smart-diff/people.yaml"),
+        base_people_source: fixture("smart-diff/people.yaml"),
+        head_people_source: fixture("smart-diff/people.yaml")
+      )
+    end.to raise_error(ArgumentError, /cannot be combined/)
+  end
 
-          result, = described_class.run(
-            base_config: File.join(base_tree, "config.yaml"),
-            head_config: File.join(head_tree, "config.yaml"),
-            base_sha: "a" * 40,
-            head_sha: "b" * 40,
-            evaluated_at: "2026-09-02T19:58:54Z",
-            base_tree: base_tree,
-            head_tree: head_tree
-          )
+  it "accepts paired people snapshots without source trees" do
+    result, = described_class.run(
+      base_config: fixture("smart-diff/config.yaml"),
+      head_config: fixture("smart-diff/config.yaml"),
+      base_sha: "a" * 40,
+      head_sha: "b" * 40,
+      base_people_source: fixture("smart-diff/people.yaml"),
+      head_people_source: fixture("smart-diff/people.yaml"),
+      evaluated_at: "2026-09-02T19:58:54Z"
+    )
 
-          changed = result["gains"] + result["losses"]
-          expect(changed).to include(
-            "backend" => "dummy",
-            "entitlement_group" => "teams/identity",
-            "username" => "target"
-          ), name
-        end
-      end
-    end
+    expect(result["counts"]).to eq("gains" => 0, "losses" => 0)
+    expect(result).not_to have_key("scope")
   end
 
   it "isolates Ruby state between base and head snapshot processes" do

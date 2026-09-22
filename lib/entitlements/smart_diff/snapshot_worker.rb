@@ -8,14 +8,7 @@ module Entitlements
     class SnapshotWorker
       def self.run(input: $stdin, output: $stdout, error: $stderr)
         request = JSON.parse(input.read)
-        people_source = request["people_source"]
-        snapshot = if people_source
-                     export(request, people_source)
-                   else
-                     Entitlements::SmartDiff::IdentitySnapshot.with_file(request.fetch("tree_root")) do |path|
-                       export(request, path)
-                     end
-                   end
+        snapshot = export(request, request.fetch("people_source"))
         output.write(JSON.generate(snapshot))
         0
       rescue StandardError => e

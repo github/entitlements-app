@@ -30,6 +30,34 @@ describe Entitlements do
     end
   end
 
+  describe "#with_evaluation_context" do
+    it "prepares isolated state and restores the source tree environment after failures" do
+      original_dir = ENV["DIR"]
+      ENV["DIR"] = "/original"
+      evaluation_time = Time.utc(2026, 9, 16, 12, 0, 0)
+      prepared_config = nil
+
+      expect do
+        subject.with_evaluation_context(
+          config_file: fixture("smart-diff/config.yaml"),
+          evaluated_at: evaluation_time,
+          tree_root: fixture("smart-diff"),
+          prepare: ->(config) { prepared_config = config }
+        ) do |config|
+          expect(config).to equal(prepared_config)
+          expect(subject.evaluation_time).to eq(evaluation_time)
+          expect(ENV["DIR"]).to eq(fixture("smart-diff"))
+          raise "context failure"
+        end
+      end.to raise_error("context failure")
+
+      expect(ENV["DIR"]).to eq("/original")
+      expect(subject.config_file).not_to eq(fixture("smart-diff/config.yaml"))
+    ensure
+      original_dir ? ENV["DIR"] = original_dir : ENV.delete("DIR")
+    end
+  end
+
   describe "#config" do
     before(:each) do
       ENV["TEST_ERB_VARIABLE"] = "Hello, ERB world!"

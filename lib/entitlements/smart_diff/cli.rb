@@ -62,9 +62,16 @@ module Entitlements
         required = %i[base_tree head_tree base_sha head_sha evaluated_at sqlite markdown]
         missing = required.reject { |key| options.key?(key) }
         raise OptionParser::MissingArgument, missing.join(", ") if missing.any?
+        shared_snapshot = options.key?(:people_snapshot)
         separate_snapshots = options.key?(:base_people_snapshot) || options.key?(:head_people_snapshot)
+        if shared_snapshot && separate_snapshots
+          raise OptionParser::InvalidArgument, "people_snapshot cannot be combined with base/head people snapshots"
+        end
         if separate_snapshots && !(options.key?(:base_people_snapshot) && options.key?(:head_people_snapshot))
           raise OptionParser::MissingArgument, "base_people_snapshot, head_people_snapshot"
+        end
+        unless shared_snapshot || separate_snapshots
+          raise OptionParser::MissingArgument, "people_snapshot or base_people_snapshot, head_people_snapshot"
         end
         options
       end

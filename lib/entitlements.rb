@@ -99,6 +99,23 @@ module Entitlements
     Entitlements::Data::Groups::Calculated.reset!
   end
 
+  def self.with_evaluation_context(config_file:, evaluated_at:, tree_root: nil, prepare: nil)
+    original_dir = ENV["DIR"]
+    ENV["DIR"] = File.expand_path(tree_root) if tree_root
+    reset!
+    self.config_file = config_file
+    self.evaluation_time = evaluated_at
+    prepare.call(config) if prepare
+    load_extras
+    register_filters
+    yield config
+  ensure
+    reset!
+    if tree_root
+      original_dir ? ENV["DIR"] = original_dir : ENV.delete("DIR")
+    end
+  end
+
   # Return the fixed time used for the current date-sensitive entitlement evaluation.
   #
   # Returns a Time.

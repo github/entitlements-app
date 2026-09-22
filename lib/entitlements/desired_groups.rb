@@ -17,33 +17,30 @@ module Entitlements
 
       evaluation_time = parse_time(evaluated_at)
       people_hash = Digest::SHA256.file(people_source).hexdigest
-      original_dir = ENV["DIR"]
-      ENV["DIR"] = File.expand_path(tree_root) if tree_root
+      backend_identifiers = nil
+      prepare = lambda do |config|
+        backend_identifiers = backend_identifiers(config)
+        use_people_snapshot!(config, people_source)
+        Entitlements.validate_configuration_file!
+      end
 
-      Entitlements.reset!
-      Entitlements.config_file = config_file
-      backend_identifiers = backend_identifiers(Entitlements.config)
-      use_people_snapshot!(people_source)
-      Entitlements.validate_configuration_file!
-      Entitlements.evaluation_time = evaluation_time
-      Entitlements.load_extras if Entitlements.config.key?("extras")
-      Entitlements.prefetch_people
-      Entitlements.cache[:desired_groups_export] = true
-      Entitlements.register_filters if Entitlements.config.key?("filters")
-
-      memberships = export_memberships(backend_identifiers, entitlement_groups: entitlement_groups)
-      {
-        "schema_version" => SCHEMA_VERSION,
-        "source_sha" => source_sha.downcase,
-        "people_snapshot_sha256" => people_hash,
-        "evaluated_at" => evaluation_time.utc.iso8601,
-        "people" => people_snapshot(people_source),
-        "memberships" => memberships
-      }
-    ensure
-      Entitlements.reset!
-      if tree_root
-        original_dir ? ENV["DIR"] = original_dir : ENV.delete("DIR")
+      Entitlements.with_evaluation_context(
+        config_file: config_file,
+        evaluated_at: evaluation_time,
+        tree_root: tree_root,
+        prepare: prepare
+      ) do
+        Entitlements.prefetch_people
+        Entitlements.cache[:desired_groups_export] = true
+        memberships = export_memberships(backend_identifiers, entitlement_groups: entitlement_groups)
+        {
+          "schema_version" => SCHEMA_VERSION,
+          "source_sha" => source_sha.downcase,
+          "people_snapshot_sha256" => people_hash,
+          "evaluated_at" => evaluation_time.utc.iso8601,
+          "people" => people_snapshot(people_source),
+          "memberships" => memberships
+        }
       end
     end
 
@@ -80,14 +77,14 @@ module Entitlements
     end
     private_class_method :backend_identifiers
 
-    def self.use_people_snapshot!(people_source)
-      Entitlements.config["people"] = {
+    def self.use_people_snapshot!(config, people_source)
+      config["people"] = {
         "smart_diff" => {
           "type" => "yaml",
           "config" => {"filename" => File.expand_path(people_source)}
         }
       }
-      Entitlements.config["people_data_source"] = "smart_diff"
+      config["people_data_source"] = "smart_diff"
     end
     private_class_method :use_people_snapshot!
 
