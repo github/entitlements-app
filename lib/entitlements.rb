@@ -491,6 +491,8 @@ module Entitlements
     calc_start = Time.now
     actions = []
     Entitlements.child_classes.map do |group_name, obj|
+      group_start = Time.now
+      logger.debug("Begin calculation for #{group_name}")
       provider = Entitlements.config["groups"].fetch(group_name).fetch("type")
       timed_operation(phase: "calculate", provider: provider, target: group_name) { obj.calculate }
       if obj.change_count > 0
@@ -498,6 +500,7 @@ module Entitlements
         cache[:change_count] += obj.change_count
       end
       actions.concat(obj.actions)
+      logger.debug("Finished calculation for #{group_name} in #{Time.now - group_start}")
     end
     logger.debug("Finished all calculations in #{Time.now - calc_start}")
     logger.debug("Finished all prefetch, validate, and calculation in #{Time.now - prep_start}")
