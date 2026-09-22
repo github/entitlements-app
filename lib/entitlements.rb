@@ -22,6 +22,7 @@ require "logger"
 require "ostruct"
 require "resolv"
 require "stringio"
+require "thread"
 require "uri"
 require "yaml"
 
@@ -438,19 +439,33 @@ module Entitlements
     # Calculate old and new membership in each group.
     thread_pool = Concurrent::FixedThreadPool.new(max_parallelism)
     logger.debug("Begin prefetch and validate for all groups")
-    prep_start = Time.now
-    futures = Entitlements.child_classes.map do |group_name, obj|
-      Concurrent::Future.execute({ executor: thread_pool }) do
-        group_start = Time.now
-        logger.debug("Begin prefetch and validate for #{group_name}")
-        provider = Entitlements.config["groups"].fetch(group_name).fetch("type")
-        timed_operation(phase: "prefetch", provider: provider, target: group_name, concurrent: true) { obj.prefetch }
-        timed_operation(phase: "validate", provider: provider, target: group_name, concurrent: true) { obj.validate }
-        logger.debug("Finished prefetch and validate for #{group_name} in #{Time.now - group_start}")
-      end
-    end
 
-    futures.each(&:value!)
+    prep_start = Time.now
+    jobs = Entitlements.child_classes
+    completions = Queue.new
+
+    begin
+      jobs.each do |group_name, obj|
+        thread_pool.post do
+          group_start = Time.now
+          logger.debug("Begin prefetch and validate for #{group_name}")
+          provider = Entitlements.config["groups"].fetch(group_name).fetch("type")
+          timed_operation(phase: "prefetch", provider: provider, target: group_name, concurrent: true) { obj.prefetch }
+          timed_operation(phase: "validate", provider: provider, target: group_name, concurrent: true) { obj.validate }
+          logger.debug("Finished prefetch and validate for #{group_name} in #{Time.now - group_start}")
+          completions << nil
+        rescue => e
+          completions << e
+        end
+      end
+
+      jobs.size.times do
+        exception = completions.pop
+        raise exception if exception
+      end
+    ensure
+      thread_pool.kill
+    end
     logger.debug("Finished all prefetch and validate in #{Time.now - prep_start}")
 
     logger.debug("Begin all calculations")

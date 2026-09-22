@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "spec_helper"
+require "timeout"
 
 describe Entitlements do
   let(:subject) { Entitlements }
@@ -320,6 +321,26 @@ describe Entitlements do
       expect(returned_actions).to eq(actions)
 
       expect(cache[:change_count]).to eq(3)
+    end
+
+    it "raises a worker failure without waiting for an earlier job" do
+      Entitlements.config["max_parallelism"] = 2
+      started = Concurrent::Event.new
+      blocker = Concurrent::Event.new
+      allow(Entitlements).to receive(:child_classes)
+        .and_return("ldap-dir" => ldap_controller, "other-ldap-dir" => other_controller)
+      allow(ldap_controller).to receive(:prefetch) do
+        started.set
+        blocker.wait
+      end
+      allow(other_controller).to receive(:prefetch) do
+        started.wait
+        raise "Boom"
+      end
+
+      expect do
+        Timeout.timeout(1) { described_class.calculate }
+      end.to raise_error(RuntimeError, "Boom")
     end
   end
 
