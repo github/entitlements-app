@@ -5,6 +5,31 @@ require_relative "spec_helper"
 describe Entitlements do
   let(:subject) { Entitlements }
 
+  describe "#evaluation_time" do
+    it "uses one timestamp until Entitlements state is reset" do
+      first_time = Time.utc(2026, 9, 16, 23, 59, 59)
+      next_time = Time.utc(2026, 9, 17, 0, 0, 0)
+      allow(Time).to receive(:now).and_return(first_time, next_time)
+
+      expect(subject.evaluation_time).to eq(first_time)
+      expect(subject.evaluation_time).to eq(first_time)
+
+      subject.reset!
+
+      expect(subject.evaluation_time).to eq(next_time)
+    end
+
+    it "preserves an explicitly configured evaluation timestamp" do
+      configured_time = Time.utc(2026, 9, 16, 12, 0, 0)
+
+      subject.evaluation_time = configured_time
+
+      expect(subject.evaluation_time).to eq(configured_time)
+      expect(Time).not_to receive(:now)
+      expect(subject.evaluation_time).to eq(configured_time)
+    end
+  end
+
   describe "#config" do
     before(:each) do
       ENV["TEST_ERB_VARIABLE"] = "Hello, ERB world!"
