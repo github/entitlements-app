@@ -91,11 +91,30 @@ module Entitlements
     @config = nil
     @config_file = nil
     @config_path_override = nil
+    @evaluation_time = nil
     @person_extra_methods = {}
     @statsd = nil
 
     reset_extras!
     Entitlements::Data::Groups::Calculated.reset!
+  end
+
+  # Return the fixed time used for the current date-sensitive entitlement evaluation.
+  #
+  # Returns a Time.
+  Contract C::None => Time
+  def self.evaluation_time
+    @evaluation_time ||= Time.now
+  end
+
+  # Set the time used for date-sensitive entitlement evaluation.
+  #
+  # value - A Time.
+  #
+  # Returns the supplied Time.
+  Contract Time => Time
+  def self.evaluation_time=(value)
+    @evaluation_time = value
   end
 
   def self.reset_extras!

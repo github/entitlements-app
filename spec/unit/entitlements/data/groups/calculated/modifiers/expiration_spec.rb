@@ -50,6 +50,15 @@ describe Entitlements::Data::Groups::Calculated::Modifiers::Expiration do
         obj = Entitlements::Data::Groups::Calculated.read("cn=expired-text-empty,ou=Felines,ou=Groups,dc=example,dc=net")
         expect(obj.members).to eq(Set.new)
       end
+
+      it "uses the configured evaluation time" do
+        Entitlements.evaluation_time = Time.utc(2000, 1, 1)
+        allow(Entitlements::Util::Util).to receive(:path_for_group).with(ou_key).and_return(fixture("ldap-config/#{ou_key}"))
+        Entitlements::Data::Groups::Calculated.read_all(ou_key, cfg_obj)
+        obj = Entitlements::Data::Groups::Calculated.read("cn=expired-text-empty,ou=Felines,ou=Groups,dc=example,dc=net")
+        expected_result = %w[russianblue mainecoon]
+        expect(obj.members).to eq(Set.new(expected_result.map { |name| people_obj.read[name] }))
+      end
     end
 
     context "non-expired non-expired yaml file (date as date)" do
