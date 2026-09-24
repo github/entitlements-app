@@ -274,7 +274,8 @@ describe Entitlements do
           "phase:audit_setup",
           "status:error",
           "span:leaf",
-          "concurrent:false"
+          "concurrent:false",
+          "error_class:RuntimeError"
         ]
       )
     end
