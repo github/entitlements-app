@@ -421,6 +421,9 @@ module Entitlements
       result = yield
       tags[1] = "status:success"
       result
+    rescue => e
+      tags << "error_class:#{e.class.name}"
+      raise
     end
   end
 
