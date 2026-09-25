@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
 
@@ -44,7 +44,7 @@ jobs:
       - name: build
         run: echo "GEM_VERSION=$(gem build ${{ env.GEM_NAME }}.gemspec 2>&1 | grep Version | cut -d':' -f 2 | tr -d " \t\n\r")" >> $GITHUB_ENV
       
-      - uses: actions/attest-build-provenance@v1
+      - uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1.4.4
         with:
           subject-path: "${{ env.GEM_NAME }}-${{ env.GEM_VERSION }}.gem"
 
