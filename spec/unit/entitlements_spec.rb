@@ -1,9 +1,35 @@
 # frozen_string_literal: true
 
 require_relative "spec_helper"
+require "timeout"
 
 describe Entitlements do
   let(:subject) { Entitlements }
+
+  describe "#evaluation_time" do
+    it "uses one timestamp until Entitlements state is reset" do
+      first_time = Time.utc(2026, 9, 16, 23, 59, 59)
+      next_time = Time.utc(2026, 9, 17, 0, 0, 0)
+      allow(Time).to receive(:now).and_return(first_time, next_time)
+
+      expect(subject.evaluation_time).to eq(first_time)
+      expect(subject.evaluation_time).to eq(first_time)
+
+      subject.reset!
+
+      expect(subject.evaluation_time).to eq(next_time)
+    end
+
+    it "preserves an explicitly configured evaluation timestamp" do
+      configured_time = Time.utc(2026, 9, 16, 12, 0, 0)
+
+      subject.evaluation_time = configured_time
+
+      expect(subject.evaluation_time).to eq(configured_time)
+      expect(Time).not_to receive(:now)
+      expect(subject.evaluation_time).to eq(configured_time)
+    end
+  end
 
   describe "#config" do
     before(:each) do
@@ -320,6 +346,26 @@ describe Entitlements do
       expect(returned_actions).to eq(actions)
 
       expect(cache[:change_count]).to eq(3)
+    end
+
+    it "raises a worker failure without waiting for an earlier job" do
+      Entitlements.config["max_parallelism"] = 2
+      started = Concurrent::Event.new
+      blocker = Concurrent::Event.new
+      allow(Entitlements).to receive(:child_classes)
+        .and_return("ldap-dir" => ldap_controller, "other-ldap-dir" => other_controller)
+      allow(ldap_controller).to receive(:prefetch) do
+        started.set
+        blocker.wait
+      end
+      allow(other_controller).to receive(:prefetch) do
+        started.wait
+        raise "Boom"
+      end
+
+      expect do
+        Timeout.timeout(1) { described_class.calculate }
+      end.to raise_error(RuntimeError, "Boom")
     end
   end
 

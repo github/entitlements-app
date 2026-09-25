@@ -217,7 +217,7 @@ module Entitlements
             return false if expiration.nil? || expiration.strip.empty?
             if expiration =~ /\A(\d{4})-(\d{2})-(\d{2})\z/
               year, month, day = Regexp.last_match(1).to_i, Regexp.last_match(2).to_i, Regexp.last_match(3).to_i
-              return Time.utc(year, month, day, 0, 0, 0) <= Time.now.utc
+              return Time.utc(year, month, day, 0, 0, 0) <= Entitlements.evaluation_time.utc
             end
             message = "Invalid expiration date #{expiration.inspect} in #{context} (expected format: YYYY-MM-DD)"
             raise ArgumentError, message
@@ -340,7 +340,7 @@ module Entitlements
           # Returns C::SetOf[Entitlements::Models::Person] from a recursive call.
           def handle_and(rule)
             ensure_type!("and", rule, Array)
-            return result unless rule.any?
+            return Set.new unless rule.any?
 
             first_rule = rule.shift
             ensure_type!("and", first_rule, Hash)

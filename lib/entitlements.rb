@@ -22,6 +22,7 @@ require "logger"
 require "ostruct"
 require "resolv"
 require "stringio"
+require "thread"
 require "uri"
 require "yaml"
 
@@ -90,11 +91,30 @@ module Entitlements
     @config = nil
     @config_file = nil
     @config_path_override = nil
+    @evaluation_time = nil
     @person_extra_methods = {}
     @statsd = nil
 
     reset_extras!
     Entitlements::Data::Groups::Calculated.reset!
+  end
+
+  # Return the fixed time used for the current date-sensitive entitlement evaluation.
+  #
+  # Returns a Time.
+  Contract C::None => Time
+  def self.evaluation_time
+    @evaluation_time ||= Time.now
+  end
+
+  # Set the time used for date-sensitive entitlement evaluation.
+  #
+  # value - A Time.
+  #
+  # Returns the supplied Time.
+  Contract Time => Time
+  def self.evaluation_time=(value)
+    @evaluation_time = value
   end
 
   def self.reset_extras!
@@ -438,25 +458,41 @@ module Entitlements
     # Calculate old and new membership in each group.
     thread_pool = Concurrent::FixedThreadPool.new(max_parallelism)
     logger.debug("Begin prefetch and validate for all groups")
-    prep_start = Time.now
-    futures = Entitlements.child_classes.map do |group_name, obj|
-      Concurrent::Future.execute({ executor: thread_pool }) do
-        group_start = Time.now
-        logger.debug("Begin prefetch and validate for #{group_name}")
-        provider = Entitlements.config["groups"].fetch(group_name).fetch("type")
-        timed_operation(phase: "prefetch", provider: provider, target: group_name, concurrent: true) { obj.prefetch }
-        timed_operation(phase: "validate", provider: provider, target: group_name, concurrent: true) { obj.validate }
-        logger.debug("Finished prefetch and validate for #{group_name} in #{Time.now - group_start}")
-      end
-    end
 
-    futures.each(&:value!)
+    prep_start = Time.now
+    jobs = Entitlements.child_classes
+    completions = Queue.new
+
+    begin
+      jobs.each do |group_name, obj|
+        thread_pool.post do
+          group_start = Time.now
+          logger.debug("Begin prefetch and validate for #{group_name}")
+          provider = Entitlements.config["groups"].fetch(group_name).fetch("type")
+          timed_operation(phase: "prefetch", provider: provider, target: group_name, concurrent: true) { obj.prefetch }
+          timed_operation(phase: "validate", provider: provider, target: group_name, concurrent: true) { obj.validate }
+          logger.debug("Finished prefetch and validate for #{group_name} in #{Time.now - group_start}")
+          completions << nil
+        rescue => e
+          completions << e
+        end
+      end
+
+      jobs.size.times do
+        exception = completions.pop
+        raise exception if exception
+      end
+    ensure
+      thread_pool.kill
+    end
     logger.debug("Finished all prefetch and validate in #{Time.now - prep_start}")
 
     logger.debug("Begin all calculations")
     calc_start = Time.now
     actions = []
     Entitlements.child_classes.map do |group_name, obj|
+      group_start = Time.now
+      logger.debug("Begin calculation for #{group_name}")
       provider = Entitlements.config["groups"].fetch(group_name).fetch("type")
       timed_operation(phase: "calculate", provider: provider, target: group_name) { obj.calculate }
       if obj.change_count > 0
@@ -464,6 +500,7 @@ module Entitlements
         cache[:change_count] += obj.change_count
       end
       actions.concat(obj.actions)
+      logger.debug("Finished calculation for #{group_name} in #{Time.now - group_start}")
     end
     logger.debug("Finished all calculations in #{Time.now - calc_start}")
     logger.debug("Finished all prefetch, validate, and calculation in #{Time.now - prep_start}")
