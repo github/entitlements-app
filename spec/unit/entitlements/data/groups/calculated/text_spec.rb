@@ -32,6 +32,14 @@ describe Entitlements::Data::Groups::Calculated::Text do
       answer_set = Set.new(answer_array)
       expect(result_set).to eq(answer_set)
     end
+
+    it "does not cache the calculating sentinel" do
+      members = Set.new([people_obj.read["blackmanx"]])
+      allow(subject).to receive(:members_from_rules).and_return(:calculating, members)
+
+      expect(subject.members).to eq(:calculating)
+      expect(subject.members).to eq(members)
+    end
   end
 
   describe "#description" do

@@ -158,6 +158,15 @@ describe Entitlements::Data::Groups::Calculated::Base do
       end
     end
 
+    context "with an empty 'and' rule set" do
+      let(:file) { fixture("ldap-config/logic_tests/simple_and.yaml") }
+      let(:obj) { Entitlements::Data::Groups::Calculated::YAML.new(filename: file, config: config) }
+
+      it "returns an empty set" do
+        expect(obj.send(:handle_and, [])).to eq(Set.new)
+      end
+    end
+
     context "with a simple 'or' rule set" do
       let(:file) { fixture("ldap-config/logic_tests/simple_or.yaml") }
       let(:obj) { Entitlements::Data::Groups::Calculated::YAML.new(filename: file, config: config) }

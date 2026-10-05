@@ -30,7 +30,7 @@ module Entitlements
               end
 
               # If the date is in the future, leave the entitlement unchanged.
-              return false if parse_date > Time.now.utc.to_date
+              return false if parse_date > Entitlements.evaluation_time.utc.to_date
 
               # Empty the group. Set metadata allowing no members. Return true to indicate modification.
               rs.metadata["no_members_ok"] = true
