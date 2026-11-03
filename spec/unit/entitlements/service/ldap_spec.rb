@@ -120,8 +120,72 @@ describe Entitlements::Service::LDAP do
         expect(logger).to receive(:debug).with("Creating connection to ldap.example.net port 636")
         expect(logger).to receive(:debug).with('Binding with user "uid=some-user,ou=system-accounts,dc=example,dc=net" with simple password authentication')
         expect(logger).to receive(:fatal).with("Kitten cuteness override")
+        expect(subject).not_to receive(:sleep)
 
         expect { subject.send(:ldap) }.to raise_error(Entitlements::Service::LDAP::ConnectionError)
+      end
+    end
+
+    context "when the initial connection is refused" do
+      let(:refusal) { Errno::ECONNREFUSED.new("LDAP unavailable") }
+
+      it "retries with a fresh client and caches only the successful client" do
+        replacement = instance_double(Net::LDAP)
+        expect(Net::LDAP).to receive(:new).twice.and_return(ldap, replacement)
+        expect(ldap).to receive(:bind).and_raise(refusal)
+        expect(replacement).to receive(:bind).and_return(true)
+        expect(replacement).to receive(:get_operation_result).and_return(OpenStruct.new(code: 0))
+        expect(logger).to receive(:warn).with(/attempt 1 of 3.*Retrying in 1s/)
+        expect(logger).not_to receive(:error)
+        expect(subject).to receive(:sleep).with(1)
+
+        expect(subject.send(:ldap)).to eq(replacement)
+        expect(subject.send(:ldap)).to eq(replacement)
+      end
+
+      it "backs off and re-raises the original error after three failed attempts" do
+        expect(Net::LDAP).to receive(:new).exactly(3).times.and_return(ldap)
+        expect(ldap).to receive(:bind).exactly(3).times.and_raise(refusal)
+        expect(logger).to receive(:warn).with(/attempt 1 of 3.*Retrying in 1s/).ordered
+        expect(subject).to receive(:sleep).with(1).ordered
+        expect(logger).to receive(:warn).with(/attempt 2 of 3.*Retrying in 2s/).ordered
+        expect(subject).to receive(:sleep).with(2).ordered
+        expect(logger).to receive(:error).with(/failed after 3 attempts: Errno::ECONNREFUSED/).ordered
+
+        expect { subject.send(:ldap) }.to raise_error { |error| expect(error).to equal(refusal) }
+      end
+    end
+
+    [OpenSSL::SSL::SSLError, Net::LDAP::Error, ArgumentError].each do |error_class|
+      it "does not retry #{error_class} during binding" do
+        error = error_class.new("Binding failed")
+        expect(Net::LDAP).to receive(:new).once.and_return(ldap)
+        expect(ldap).to receive(:bind).once.and_raise(error)
+        expect(subject).not_to receive(:sleep)
+        expect(logger).not_to receive(:warn)
+
+        expect { subject.send(:ldap) }.to raise_error { |raised| expect(raised).to equal(error) }
+      end
+    end
+
+    context "after a successful bind" do
+      before do
+        expect(Net::LDAP).to receive(:new).once.and_return(ldap)
+        expect(ldap).to receive(:bind).once.and_return(true)
+        allow(ldap).to receive(:get_operation_result).and_return(OpenStruct.new(code: 0))
+        expect(subject).not_to receive(:sleep)
+      end
+
+      it "does not retry a refused search" do
+        expect(ldap).to receive(:search).once.and_raise(Errno::ECONNREFUSED)
+
+        expect { subject.search(base: dn1) }.to raise_error(Errno::ECONNREFUSED)
+      end
+
+      it "does not retry a refused modification" do
+        expect(ldap).to receive(:replace_attribute).with(dn1, "member", dn2).once.and_raise(Errno::ECONNREFUSED)
+
+        expect { subject.modify(dn1, "member" => dn2) }.to raise_error(Errno::ECONNREFUSED)
       end
     end
 

@@ -248,7 +248,9 @@ module Entitlements
       # Returns a Net::LDAP object configured to connect and bind for each operation.
       Contract C::None => Net::LDAP
       def ldap
+        attempts = 0
         @ldap ||= begin
+          attempts += 1
           uri = URI(addr)
 
           # Construct the object
@@ -286,6 +288,15 @@ module Entitlements
 
           # Return the object itself
           ldap_object
+        rescue Errno::ECONNREFUSED => error
+          if attempts >= 3
+            Entitlements.logger.error "LDAP connection to #{uri.host}:#{uri.port} failed after #{attempts} attempts: #{error.class}"
+            raise
+          end
+
+          Entitlements.logger.warn "LDAP connection to #{uri.host}:#{uri.port} failed (attempt #{attempts} of 3): #{error.class}. Retrying in #{attempts}s."
+          sleep attempts
+          retry
         end
       end
 
