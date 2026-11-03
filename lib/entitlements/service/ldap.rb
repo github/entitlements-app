@@ -120,27 +120,32 @@ module Entitlements
         # be consistent no matter what. LDAP is case insensitive after all!
         downcased_attrs = attrs == "*" ? "*" : attrs.map { |a| a.downcase }
 
-        result = {}
-        search_succeeded = ldap.search(
-          base: base,
-          filter: filter,
-          attributes: downcased_attrs,
-          scope: scope,
-          return_result: false
-        ) do |entry|
-          result_key = index == :dn ? entry.dn : entry[index]
-          unless result_key
-            raise EntryError, "#{entry.dn} has no value for #{index.inspect}"
-          end
+        connection = ldap
+        result = with_ldap_connection_retries do
+          entries = {}
+          search_succeeded = connection.search(
+            base: base,
+            filter: filter,
+            attributes: downcased_attrs,
+            scope: scope,
+            return_result: false
+          ) do |entry|
+            result_key = index == :dn ? entry.dn : entry[index]
+            unless result_key
+              raise EntryError, "#{entry.dn} has no value for #{index.inspect}"
+            end
 
-          if result.key?(result_key)
-            other_entry_dn = result[result_key].dn
-            raise DuplicateEntryError, "#{entry.dn} and #{other_entry_dn} have the same value of #{index} = #{result_key.inspect}"
-          end
+            if entries.key?(result_key)
+              other_entry_dn = entries[result_key].dn
+              raise DuplicateEntryError, "#{entry.dn} and #{other_entry_dn} have the same value of #{index} = #{result_key.inspect}"
+            end
 
-          result[result_key] = entry
+            entries[result_key] = entry
+          end
+          remember_existing_dn(base) if search_succeeded
+
+          entries
         end
-        remember_existing_dn(base) if search_succeeded
 
         Entitlements.logger.debug "Completed search: #{result.keys.size} result(s)"
 
@@ -248,9 +253,7 @@ module Entitlements
       # Returns a Net::LDAP object configured to connect and bind for each operation.
       Contract C::None => Net::LDAP
       def ldap
-        attempts = 0
-        @ldap ||= begin
-          attempts += 1
+        @ldap ||= with_ldap_connection_retries do
           uri = URI(addr)
 
           # Construct the object
@@ -288,16 +291,40 @@ module Entitlements
 
           # Return the object itself
           ldap_object
-        rescue Errno::ECONNREFUSED => error
+        end
+      end
+
+      def with_ldap_connection_retries
+        attempts = 0
+        begin
+          attempts += 1
+          yield
+        rescue Errno::ECONNREFUSED, Errno::ETIMEDOUT, Net::LDAP::Error => error
+          raise unless retryable_connection_error?(error)
+
+          uri = URI(addr)
           if attempts >= 3
-            Entitlements.logger.error "LDAP connection to #{uri.host}:#{uri.port} failed after #{attempts} attempts: #{error.class}"
+            Entitlements.logger.error "LDAP connection to #{uri.host}:#{uri.port} failed after #{attempts} attempts: #{error.class}: #{error.message}"
             raise
           end
 
-          Entitlements.logger.warn "LDAP connection to #{uri.host}:#{uri.port} failed (attempt #{attempts} of 3): #{error.class}. Retrying in #{attempts}s."
+          Entitlements.logger.warn "LDAP connection to #{uri.host}:#{uri.port} failed (attempt #{attempts} of 3): #{error.class}: #{error.message}. Retrying in #{attempts}s."
           sleep attempts
           retry
         end
+      end
+
+      def retryable_connection_error?(error)
+        return true if error.is_a?(Errno::ECONNREFUSED) || error.is_a?(Errno::ETIMEDOUT)
+        return false unless error.instance_of?(Net::LDAP::Error)
+
+        # net-ldap erases single-host error types, including TLS failures.
+        # Match only known transient resolver/connect-timeout messages.
+        [
+          "getaddrinfo: Temporary failure in name resolution",
+          "Connection timed out - user specified timeout",
+          "Operation timed out - user specified timeout"
+        ].include?(error.message)
       end
 
       # Create an object that does not exist. Private method intended to be called from

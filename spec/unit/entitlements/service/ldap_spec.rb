@@ -154,6 +154,36 @@ describe Entitlements::Service::LDAP do
 
         expect { subject.send(:ldap) }.to raise_error { |error| expect(error).to equal(refusal) }
       end
+
+      it "does not restart exhausted bind retries when called from a search" do
+        expect(Net::LDAP).to receive(:new).exactly(3).times.and_return(ldap)
+        expect(ldap).to receive(:bind).exactly(3).times.and_raise(refusal)
+        expect(ldap).not_to receive(:search)
+        expect(logger).to receive(:warn).twice
+        expect(logger).to receive(:error).once
+        expect(subject).to receive(:sleep).with(1).ordered
+        expect(subject).to receive(:sleep).with(2).ordered
+
+        expect { subject.search(base: dn1) }.to raise_error { |error| expect(error).to equal(refusal) }
+      end
+    end
+
+    [
+      [SocketError, "getaddrinfo: Temporary failure in name resolution"],
+      [Errno::ETIMEDOUT, "user specified timeout"]
+    ].each do |error_class, message|
+      it "retries a wrapped #{error_class} during binding" do
+        error = Net::LDAP::ConnectionError.new([[error_class.new(message), "ldap.example.net", 636]])
+        replacement = instance_double(Net::LDAP)
+        expect(Net::LDAP).to receive(:new).twice.and_return(ldap, replacement)
+        expect(ldap).to receive(:bind).and_raise(error)
+        expect(replacement).to receive(:bind).and_return(true)
+        expect(replacement).to receive(:get_operation_result).and_return(OpenStruct.new(code: 0))
+        expect(logger).to receive(:warn).with(/attempt 1 of 3.*Retrying in 1s/)
+        expect(subject).to receive(:sleep).with(1)
+
+        expect(subject.send(:ldap)).to eq(replacement)
+      end
     end
 
     [OpenSSL::SSL::SSLError, Net::LDAP::Error, ArgumentError].each do |error_class|
@@ -173,17 +203,20 @@ describe Entitlements::Service::LDAP do
         expect(Net::LDAP).to receive(:new).once.and_return(ldap)
         expect(ldap).to receive(:bind).once.and_return(true)
         allow(ldap).to receive(:get_operation_result).and_return(OpenStruct.new(code: 0))
-        expect(subject).not_to receive(:sleep)
       end
 
-      it "does not retry a refused search" do
-        expect(ldap).to receive(:search).once.and_raise(Errno::ECONNREFUSED)
+      it "retries a refused search" do
+        expect(ldap).to receive(:search).ordered.and_raise(Errno::ECONNREFUSED)
+        expect(ldap).to receive(:search).ordered.and_return(true)
+        expect(logger).to receive(:warn).with(/attempt 1 of 3.*Retrying in 1s/)
+        expect(subject).to receive(:sleep).with(1)
 
-        expect { subject.search(base: dn1) }.to raise_error(Errno::ECONNREFUSED)
+        expect(subject.search(base: dn1)).to eq({})
       end
 
       it "does not retry a refused modification" do
         expect(ldap).to receive(:replace_attribute).with(dn1, "member", dn2).once.and_raise(Errno::ECONNREFUSED)
+        expect(subject).not_to receive(:sleep)
 
         expect { subject.modify(dn1, "member" => dn2) }.to raise_error(Errno::ECONNREFUSED)
       end
@@ -230,6 +263,67 @@ describe Entitlements::Service::LDAP do
   end
 
   describe "#search" do
+    context "when the connection fails" do
+      let(:dns_error) do
+        Net::LDAP::ConnectionError.new([[SocketError.new("getaddrinfo: Temporary failure in name resolution"), "ldap.example.net", 636]])
+      end
+
+      before do
+        expect(subject).to receive(:ldap).once.and_return(ldap)
+        allow(entry1).to receive(:dn).and_return(dn1)
+        allow(entry2).to receive(:dn).and_return(dn2)
+      end
+
+      [
+        [SocketError, "getaddrinfo: Temporary failure in name resolution"],
+        [Errno::ETIMEDOUT, "user specified timeout"]
+      ].each do |error_class, message|
+        it "retries a wrapped #{error_class} during a search" do
+          error = Net::LDAP::ConnectionError.new([[error_class.new(message), "ldap.example.net", 636]])
+          expect(ldap).to receive(:search).ordered.and_raise(error)
+          expect(ldap).to receive(:search).ordered.and_yield(entry1).and_return(true)
+          expect(logger).to receive(:warn).with(/attempt 1 of 3.*Retrying in 1s/)
+          expect(subject).to receive(:sleep).with(1)
+
+          expect(subject.search(base: dn1)).to eq(dn1 => entry1)
+        end
+      end
+
+      it "discards partial results before retrying" do
+        expect(ldap).to receive(:search).ordered.and_yield(entry1).and_raise(dns_error)
+        expect(ldap).to receive(:search).ordered.and_yield(entry2).and_return(true)
+        expect(logger).to receive(:warn).with(/attempt 1 of 3.*Retrying in 1s/)
+        expect(subject).to receive(:sleep).with(1)
+
+        expect(subject.search(base: dn1)).to eq(dn2 => entry2)
+      end
+
+      it "re-raises the original DNS error after three failed searches" do
+        expect(ldap).to receive(:search).exactly(3).times.and_raise(dns_error)
+        expect(logger).to receive(:warn).twice
+        expect(logger).to receive(:error).with(/failed after 3 attempts: Net::LDAP::Error/)
+        expect(subject).to receive(:sleep).with(1).ordered
+        expect(subject).to receive(:sleep).with(2).ordered
+
+        expect { subject.search(base: dn1) }.to raise_error { |error| expect(error).to equal(dns_error) }
+      end
+
+      [
+        "getaddrinfo: Name or service not known",
+        "SSL_connect returned=1 errno=0: certificate verify failed",
+        "Invalid search filter"
+      ].each do |message|
+        it "does not retry #{message}" do
+          error = Net::LDAP::Error.new(message)
+          expect(ldap).to receive(:search).once.and_raise(error)
+          expect(logger).not_to receive(:warn)
+          expect(subject).not_to receive(:sleep)
+
+          expect { subject.search(base: dn1) }.to raise_error { |raised| expect(raised).to equal(error) }
+        end
+      end
+    end
+
     it "raises a duplicate entry error if the same index key is reassigned" do
       filter = Net::LDAP::Filter.eq("manager", "uid=evilbacon,ou=People,dc=example,dc=net")
       expect(subject).to receive(:ldap).and_return(ldap)
