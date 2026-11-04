@@ -8,6 +8,8 @@ module Entitlements
       include ::Contracts::Core
       C = ::Contracts
 
+      MAX_CONNECTION_ATTEMPTS = 3
+
       class ConnectionError < RuntimeError; end
       class DuplicateEntryError < RuntimeError; end
       class EntryError < RuntimeError; end
@@ -120,6 +122,7 @@ module Entitlements
         # be consistent no matter what. LDAP is case insensitive after all!
         downcased_attrs = attrs == "*" ? "*" : attrs.map { |a| a.downcase }
 
+        # Outside the retry block: `ldap` retries its own bind, and nesting would multiply attempts.
         connection = ldap
         result = with_ldap_connection_retries do
           entries = {}
@@ -299,32 +302,33 @@ module Entitlements
         begin
           attempts += 1
           yield
-        rescue Errno::ECONNREFUSED, Errno::ETIMEDOUT, Net::LDAP::Error => error
+        rescue SystemCallError, Net::LDAP::Error => error
           raise unless retryable_connection_error?(error)
 
           uri = URI(addr)
-          if attempts >= 3
+          if attempts >= MAX_CONNECTION_ATTEMPTS
             Entitlements.logger.error "LDAP connection to #{uri.host}:#{uri.port} failed after #{attempts} attempts: #{error.class}: #{error.message}"
             raise
           end
 
-          Entitlements.logger.warn "LDAP connection to #{uri.host}:#{uri.port} failed (attempt #{attempts} of 3): #{error.class}: #{error.message}. Retrying in #{attempts}s."
+          Entitlements.logger.warn "LDAP connection to #{uri.host}:#{uri.port} failed (attempt #{attempts} of #{MAX_CONNECTION_ATTEMPTS}): #{error.class}: #{error.message}. Retrying in #{attempts}s."
           sleep attempts
           retry
         end
       end
 
+      # net-ldap turns single-host connection-setup failures (DNS, connect/TLS timeouts,
+      # unreachable host) into a bare Net::LDAP::Error with no cause, and the messages vary
+      # by libc. Operation errors are subclasses. Errno cases can hit mid-request; that's
+      # fine only because this never wraps writes.
       def retryable_connection_error?(error)
-        return true if error.is_a?(Errno::ECONNREFUSED) || error.is_a?(Errno::ETIMEDOUT)
-        return false unless error.instance_of?(Net::LDAP::Error)
-
-        # net-ldap erases single-host error types, including TLS failures.
-        # Match only known transient resolver/connect-timeout messages.
-        [
-          "getaddrinfo: Temporary failure in name resolution",
-          "Connection timed out - user specified timeout",
-          "Operation timed out - user specified timeout"
-        ].include?(error.message)
+        case error
+        when Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EPIPE, Errno::ETIMEDOUT
+          true
+        when Net::LDAP::Error
+          error.instance_of?(Net::LDAP::Error) &&
+            !error.message.match?(/certificate verify failed|does not match the server certificate/)
+        end
       end
 
       # Create an object that does not exist. Private method intended to be called from

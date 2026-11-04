@@ -186,7 +186,7 @@ describe Entitlements::Service::LDAP do
       end
     end
 
-    [OpenSSL::SSL::SSLError, Net::LDAP::Error, ArgumentError].each do |error_class|
+    [OpenSSL::SSL::SSLError, Net::LDAP::BindingInformationInvalidError, ArgumentError].each do |error_class|
       it "does not retry #{error_class} during binding" do
         error = error_class.new("Binding failed")
         expect(Net::LDAP).to receive(:new).once.and_return(ldap)
@@ -205,13 +205,15 @@ describe Entitlements::Service::LDAP do
         allow(ldap).to receive(:get_operation_result).and_return(OpenStruct.new(code: 0))
       end
 
-      it "retries a refused search" do
-        expect(ldap).to receive(:search).ordered.and_raise(Errno::ECONNREFUSED)
-        expect(ldap).to receive(:search).ordered.and_return(true)
-        expect(logger).to receive(:warn).with(/attempt 1 of 3.*Retrying in 1s/)
-        expect(subject).to receive(:sleep).with(1)
+      [Errno::ECONNREFUSED, Errno::ECONNRESET].each do |error_class|
+        it "retries #{error_class} during a search" do
+          expect(ldap).to receive(:search).ordered.and_raise(error_class)
+          expect(ldap).to receive(:search).ordered.and_return(true)
+          expect(logger).to receive(:warn).with(/attempt 1 of 3.*Retrying in 1s/)
+          expect(subject).to receive(:sleep).with(1)
 
-        expect(subject.search(base: dn1)).to eq({})
+          expect(subject.search(base: dn1)).to eq({})
+        end
       end
 
       it "does not retry a refused modification" do
@@ -276,9 +278,12 @@ describe Entitlements::Service::LDAP do
 
       [
         [SocketError, "getaddrinfo: Temporary failure in name resolution"],
-        [Errno::ETIMEDOUT, "user specified timeout"]
+        [SocketError, "getaddrinfo: Try again"],
+        [SocketError, "getaddrinfo: Name or service not known"],
+        [Errno::ETIMEDOUT, "user specified timeout"],
+        [Errno::ETIMEDOUT, "OpenSSL connection read timeout"]
       ].each do |error_class, message|
-        it "retries a wrapped #{error_class} during a search" do
+        it "retries a wrapped #{error_class} (#{message}) during a search" do
           error = Net::LDAP::ConnectionError.new([[error_class.new(message), "ldap.example.net", 636]])
           expect(ldap).to receive(:search).ordered.and_raise(error)
           expect(ldap).to receive(:search).ordered.and_yield(entry1).and_return(true)
@@ -309,12 +314,12 @@ describe Entitlements::Service::LDAP do
       end
 
       [
-        "getaddrinfo: Name or service not known",
-        "SSL_connect returned=1 errno=0: certificate verify failed",
-        "Invalid search filter"
-      ].each do |message|
-        it "does not retry #{message}" do
-          error = Net::LDAP::Error.new(message)
+        [Net::LDAP::Error, "SSL_connect returned=1 errno=0: certificate verify failed"],
+        [Net::LDAP::Error, 'hostname "ldap.example.net" does not match the server certificate'],
+        [Net::LDAP::FilterSyntaxInvalidError, "Invalid filter syntax."]
+      ].each do |error_class, message|
+        it "does not retry #{error_class}: #{message}" do
+          error = error_class.new(message)
           expect(ldap).to receive(:search).once.and_raise(error)
           expect(logger).not_to receive(:warn)
           expect(subject).not_to receive(:sleep)
