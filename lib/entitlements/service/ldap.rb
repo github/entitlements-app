@@ -8,6 +8,8 @@ module Entitlements
       include ::Contracts::Core
       C = ::Contracts
 
+      MAX_CONNECTION_ATTEMPTS = 3
+
       class ConnectionError < RuntimeError; end
       class DuplicateEntryError < RuntimeError; end
       class EntryError < RuntimeError; end
@@ -120,27 +122,33 @@ module Entitlements
         # be consistent no matter what. LDAP is case insensitive after all!
         downcased_attrs = attrs == "*" ? "*" : attrs.map { |a| a.downcase }
 
-        result = {}
-        search_succeeded = ldap.search(
-          base: base,
-          filter: filter,
-          attributes: downcased_attrs,
-          scope: scope,
-          return_result: false
-        ) do |entry|
-          result_key = index == :dn ? entry.dn : entry[index]
-          unless result_key
-            raise EntryError, "#{entry.dn} has no value for #{index.inspect}"
-          end
+        # Outside the retry block: `ldap` retries its own bind, and nesting would multiply attempts.
+        connection = ldap
+        result = with_ldap_connection_retries do
+          entries = {}
+          search_succeeded = connection.search(
+            base: base,
+            filter: filter,
+            attributes: downcased_attrs,
+            scope: scope,
+            return_result: false
+          ) do |entry|
+            result_key = index == :dn ? entry.dn : entry[index]
+            unless result_key
+              raise EntryError, "#{entry.dn} has no value for #{index.inspect}"
+            end
 
-          if result.key?(result_key)
-            other_entry_dn = result[result_key].dn
-            raise DuplicateEntryError, "#{entry.dn} and #{other_entry_dn} have the same value of #{index} = #{result_key.inspect}"
-          end
+            if entries.key?(result_key)
+              other_entry_dn = entries[result_key].dn
+              raise DuplicateEntryError, "#{entry.dn} and #{other_entry_dn} have the same value of #{index} = #{result_key.inspect}"
+            end
 
-          result[result_key] = entry
+            entries[result_key] = entry
+          end
+          remember_existing_dn(base) if search_succeeded
+
+          entries
         end
-        remember_existing_dn(base) if search_succeeded
 
         Entitlements.logger.debug "Completed search: #{result.keys.size} result(s)"
 
@@ -248,7 +256,7 @@ module Entitlements
       # Returns a Net::LDAP object configured to connect and bind for each operation.
       Contract C::None => Net::LDAP
       def ldap
-        @ldap ||= begin
+        @ldap ||= with_ldap_connection_retries do
           uri = URI(addr)
 
           # Construct the object
@@ -286,6 +294,40 @@ module Entitlements
 
           # Return the object itself
           ldap_object
+        end
+      end
+
+      def with_ldap_connection_retries
+        attempts = 0
+        begin
+          attempts += 1
+          yield
+        rescue SystemCallError, Net::LDAP::Error => error
+          raise unless retryable_connection_error?(error)
+
+          uri = URI(addr)
+          if attempts >= MAX_CONNECTION_ATTEMPTS
+            Entitlements.logger.error "LDAP connection to #{uri.host}:#{uri.port} failed after #{attempts} attempts: #{error.class}: #{error.message}"
+            raise
+          end
+
+          Entitlements.logger.warn "LDAP connection to #{uri.host}:#{uri.port} failed (attempt #{attempts} of #{MAX_CONNECTION_ATTEMPTS}): #{error.class}: #{error.message}. Retrying in #{attempts}s."
+          sleep attempts
+          retry
+        end
+      end
+
+      # net-ldap turns single-host connection-setup failures (DNS, connect/TLS timeouts,
+      # unreachable host) into a bare Net::LDAP::Error with no cause, and the messages vary
+      # by libc. Operation errors are subclasses. Errno cases can hit mid-request; that's
+      # fine only because this never wraps writes.
+      def retryable_connection_error?(error)
+        case error
+        when Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EPIPE, Errno::ETIMEDOUT
+          true
+        when Net::LDAP::Error
+          error.instance_of?(Net::LDAP::Error) &&
+            !error.message.match?(/certificate verify failed|does not match the server certificate/)
         end
       end
 
