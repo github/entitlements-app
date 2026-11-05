@@ -91,6 +91,33 @@ describe Entitlements::Data::Groups::Calculated do
       expect { described_class.read_all(ou_key, cfg_obj) }.to raise_error("Illegal LDAP group name \"abcd!efg\" in simple!")
     end
 
+    it "only lets one thread calculate at a time" do
+      active = 0
+      max_active = 0
+      counter = Mutex.new
+      allow(described_class).to receive(:_read_all) do
+        counter.synchronize { max_active = [max_active, active += 1].max }
+        sleep 0.01
+        counter.synchronize { active -= 1 }
+        Set.new
+      end
+
+      4.times.map { Thread.new { described_class.read_all(ou_key, cfg_obj) } }.each(&:join)
+      expect(max_active).to eq(1)
+    end
+
+    it "allows a thread that is already calculating to call read_all again" do
+      calls = 0
+      allow(described_class).to receive(:_read_all) do
+        calls += 1
+        described_class.read_all("other", cfg_obj) if calls == 1
+        Set.new
+      end
+
+      expect { described_class.read_all(ou_key, cfg_obj) }.not_to raise_error
+      expect(calls).to eq(2)
+    end
+
     context "with broken references" do
       let(:ou_key) { "missing_references_2" }
 
