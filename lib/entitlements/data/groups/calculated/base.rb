@@ -107,7 +107,7 @@ module Entitlements
           # members_in - Optionally a set of Entitlements::Models::Person with the currently calculated member set.
           #
           # Returns Set[Entitlements::Models::Person] of all matching members.
-          Contract C::None => C::Or[:calculating, C::SetOf[Entitlements::Models::Person]]
+          Contract C::None => C::Or[:calculating, Set]
           def filtered_members
             return :calculating if members == :calculating
 
