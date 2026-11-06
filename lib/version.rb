@@ -2,6 +2,6 @@
 
 module Entitlements
   module Version
-    VERSION = "1.2.11"
+    VERSION = "1.2.13"
   end
 end
