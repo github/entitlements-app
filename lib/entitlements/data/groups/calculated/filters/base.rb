@@ -80,7 +80,7 @@ module Entitlements
                 member_set = Entitlements::Data::Groups::Calculated::Rules::Group.matches(
                   value: group_ref,
                 )
-                member_set.map { |person| person.uid.downcase }
+                member_set.map { |person| person.uid.downcase }.to_set
               end
 
               Entitlements.cache[:member_of_named_group][group_ref].include?(member.uid.downcase)
