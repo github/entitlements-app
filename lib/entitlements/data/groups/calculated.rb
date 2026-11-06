@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "monitor"
 require_relative "calculated/base"
 require_relative "calculated/ruby"
 require_relative "calculated/text"
@@ -25,6 +26,11 @@ module Entitlements
         @groups_in_ou_cache = {}
         @groups_cache = {}
         @config_cache = {}
+
+        # Group calculation shares state across groups (Entitlements.cache[:calculated], the
+        # dependency stack used for circular-reference detection, and the caches above), so only
+        # one thread may calculate at a time. Re-entrant because calculation can recurse.
+        CALCULATION_LOCK = Monitor.new
 
         # Reset all module state
         #
@@ -63,6 +69,13 @@ module Entitlements
           skip_broken_references: C::Optional[C::Bool]
         ] => C::SetOf[String]
         def self.read_all(ou_key, cfg_obj, skip_broken_references: false)
+          CALCULATION_LOCK.synchronize { _read_all(ou_key, cfg_obj, skip_broken_references: skip_broken_references) }
+        end
+
+        Contract String, C::HashOf[String => C::Any], C::KeywordArgs[
+          skip_broken_references: C::Bool
+        ] => C::SetOf[String]
+        def self._read_all(ou_key, cfg_obj, skip_broken_references:)
           return read_mirror(ou_key, cfg_obj) if cfg_obj["mirror"]
 
           @config_cache[ou_key] ||= cfg_obj
