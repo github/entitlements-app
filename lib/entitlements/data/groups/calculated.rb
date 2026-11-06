@@ -69,7 +69,7 @@ module Entitlements
           skip_broken_references: C::Optional[C::Bool]
         ] => C::SetOf[String]
         def self.read_all(ou_key, cfg_obj, skip_broken_references: false)
-          CALCULATION_LOCK.synchronize { _read_all(ou_key, cfg_obj, skip_broken_references:) }
+          CALCULATION_LOCK.synchronize { _read_all(ou_key, cfg_obj, skip_broken_references: skip_broken_references) }
         end
 
         Contract String, C::HashOf[String => C::Any], C::KeywordArgs[
