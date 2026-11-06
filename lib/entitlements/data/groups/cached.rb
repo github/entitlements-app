@@ -44,7 +44,7 @@ module Entitlements
             metadata = file_lines.dup
             unless metadata.empty?
               metadata.select! { |line| line.start_with?("metadata_") }
-              metadata = metadata.map { |metadata_string| metadata_string.split "=" }.to_h
+              metadata = metadata.map { |metadata_string| metadata_string.split("=", 2) }.to_h
               metadata.transform_keys! { |key| key.delete_prefix("metadata_") }
             end
 
