@@ -319,12 +319,16 @@ module Entitlements
         return existing.first if existing
 
         options = ldap_options
+        Entitlements.logger.debug "Creating connection to #{options[:host]} port #{options[:port]}"
         connection = Net::LDAP::Connection.new(host: options[:host], port: options[:port], encryption: options[:encryption])
+        Entitlements.logger.debug "Binding with user #{binddn.inspect} with simple password authentication"
         result = connection.bind(options[:auth])
         unless result.result_code == Net::LDAP::ResultCodeSuccess
           connection.close
+          Entitlements.logger.fatal result.error_message
           raise ConnectionError, "FATAL: #{result.error_message}"
         end
+        Entitlements.logger.debug "Successfully authenticated to #{options[:host]} port #{options[:port]}"
 
         ldap_object = Net::LDAP.new(options)
         ldap_object.connection = connection
