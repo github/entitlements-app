@@ -84,6 +84,8 @@ module Entitlements
         @person_dn_format = person_dn_format
         @known_existing_dns = {}
         @known_existing_dns_mutex = Mutex.new
+        @search_connections = {}
+        @search_connections_mutex = Mutex.new
       end
 
       # Read a single entry identified by its DN and return the value. Returns nil if
@@ -122,32 +124,32 @@ module Entitlements
         # be consistent no matter what. LDAP is case insensitive after all!
         downcased_attrs = attrs == "*" ? "*" : attrs.map { |a| a.downcase }
 
-        # Outside the retry block: `ldap` retries its own bind, and nesting would multiply attempts.
-        connection = ldap
         result = with_ldap_connection_retries do
-          entries = {}
-          search_succeeded = connection.search(
-            base: base,
-            filter: filter,
-            attributes: downcased_attrs,
-            scope: scope,
-            return_result: false
-          ) do |entry|
-            result_key = index == :dn ? entry.dn : entry[index]
-            unless result_key
-              raise EntryError, "#{entry.dn} has no value for #{index.inspect}"
-            end
+          with_search_connection do |connection|
+            entries = {}
+            search_succeeded = connection.search(
+              base: base,
+              filter: filter,
+              attributes: downcased_attrs,
+              scope: scope,
+              return_result: false
+            ) do |entry|
+              result_key = index == :dn ? entry.dn : entry[index]
+              unless result_key
+                raise EntryError, "#{entry.dn} has no value for #{index.inspect}"
+              end
 
-            if entries.key?(result_key)
-              other_entry_dn = entries[result_key].dn
-              raise DuplicateEntryError, "#{entry.dn} and #{other_entry_dn} have the same value of #{index} = #{result_key.inspect}"
-            end
+              if entries.key?(result_key)
+                other_entry_dn = entries[result_key].dn
+                raise DuplicateEntryError, "#{entry.dn} and #{other_entry_dn} have the same value of #{index} = #{result_key.inspect}"
+              end
 
-            entries[result_key] = entry
+              entries[result_key] = entry
+            end
+            remember_existing_dn(base) if search_succeeded
+
+            entries
           end
-          remember_existing_dn(base) if search_succeeded
-
-          entries
         end
 
         Entitlements.logger.debug "Completed search: #{result.keys.size} result(s)"
@@ -261,24 +263,6 @@ module Entitlements
 
           # Construct the object
           Entitlements.logger.debug "Creating connection to #{uri.host} port #{uri.port}"
-          ldap_options = {
-            host: uri.host,
-            port: uri.port,
-            auth: { method: :simple, username: binddn, password: bindpw }
-          }
-          if uri.scheme == "ldaps"
-            ldap_options[:encryption] = {
-              method: :simple_tls,
-              tls_options: {
-                verify_mode: @disable_ssl_verification ? OpenSSL::SSL::VERIFY_NONE : OpenSSL::SSL::VERIFY_PEER
-              }
-            }
-          end
-
-          if @ca_file && ldap_options[:encryption].key?(:tls_options)
-            ldap_options[:encryption][:tls_options][:ca_file] = @ca_file
-          end
-
           ldap_object = Net::LDAP.new(ldap_options)
           raise WTFError, "FATAL: can't create LDAP connection object" if ldap_object.nil?
 
@@ -295,6 +279,64 @@ module Entitlements
           # Return the object itself
           ldap_object
         end
+      end
+
+      def ldap_options
+        uri = URI(addr)
+        options = {
+          host: uri.host,
+          port: uri.port,
+          auth: { method: :simple, username: binddn, password: bindpw }
+        }
+        if uri.scheme == "ldaps"
+          options[:encryption] = {
+            method: :simple_tls,
+            tls_options: {
+              verify_mode: @disable_ssl_verification ? OpenSSL::SSL::VERIFY_NONE : OpenSSL::SSL::VERIFY_PEER
+            }
+          }
+        end
+
+        if @ca_file && options[:encryption].key?(:tls_options)
+          options[:encryption][:tls_options][:ca_file] = @ca_file
+        end
+
+        options
+      end
+
+      # Searches reuse one bound connection per thread instead of connecting and binding each time.
+      def with_search_connection
+        reused = @search_connections_mutex.synchronize { @search_connections.key?(Thread.current) }
+        yield search_connection
+      rescue SystemCallError, IOError, OpenSSL::SSL::SSLError, Net::LDAP::Error
+        close_search_connection
+        # The server may have dropped an idle connection, so retry once on a new one.
+        reused ? retry : raise
+      end
+
+      def search_connection
+        existing = @search_connections_mutex.synchronize { @search_connections[Thread.current] }
+        return existing.first if existing
+
+        options = ldap_options
+        connection = Net::LDAP::Connection.new(host: options[:host], port: options[:port], encryption: options[:encryption])
+        result = connection.bind(options[:auth])
+        unless result.result_code == Net::LDAP::ResultCodeSuccess
+          connection.close
+          raise ConnectionError, "FATAL: #{result.error_message}"
+        end
+
+        ldap_object = Net::LDAP.new(options)
+        ldap_object.connection = connection
+        @search_connections_mutex.synchronize { @search_connections[Thread.current] = [ldap_object, connection] }
+        ldap_object
+      end
+
+      def close_search_connection
+        _, connection = @search_connections_mutex.synchronize { @search_connections.delete(Thread.current) }
+        connection&.close
+      rescue IOError, SystemCallError, OpenSSL::SSL::SSLError
+        nil
       end
 
       def with_ldap_connection_retries
