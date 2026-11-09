@@ -21,7 +21,7 @@ Please note that this project is released with a [Contributor Code of Conduct][c
 
     It's easy to introduce bugs by passing or returning inconsistent data types, and tracking down those `Undefined method for nil:NilClass` errors can be painful. Ruby contracts help to avoid these problems proactively, freeing us from writing tons of boilerplate, defensive code. (There is a performance penalty, but the nature of Entitlements does not require it to be high performance.)
 
-- 100% [unit test](#unit-tests) coverage is required.
+- 100% [unit test](docs/tests.md#unit-tests) coverage is required.
 
     A complete set of unit tests ensures that our code works as expected and forces us to provide coverage for both happy and sad paths. The `# :nocov:` control comment can be used to avoid writing test coverage for small portions of code where it is not reasonable to do so.
 
@@ -29,7 +29,7 @@ Please note that this project is released with a [Contributor Code of Conduct][c
 
     Unit tests should stub/mock any calls to external services, which allows those tests to run quickly and easily in both local development environments and CI.
 
-- [Acceptance test](#acceptance-tests) coverage is required for new and interesting functionality.
+- [Acceptance test](docs/tests.md#acceptance-tests) coverage is required for new and interesting functionality.
 
     Acceptance tests provide end-to-end coverage of the functionality of the application from a user perspective. By testing against realistic network services (e.g. an LDAP server running in a Docker container) we can increase our confidence that the application will work in production.
 
@@ -41,7 +41,7 @@ Please note that this project is released with a [Contributor Code of Conduct][c
 
 0. [Fork][fork] and clone the repository
 0. Configure and install the dependencies: `script/bootstrap`
-0. Make sure the tests pass on your machine: `rake`
+0. Make sure the tests pass on your machine: `script/test -d`
 0. Create a new branch: `git checkout -b my-branch-name`
 0. Make your change, add tests, and make sure the tests still pass
 0. Push to your fork and [submit a pull request][pr]
