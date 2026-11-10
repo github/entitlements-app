@@ -154,18 +154,6 @@ describe Entitlements::Service::LDAP do
 
         expect { subject.send(:ldap) }.to raise_error { |error| expect(error).to equal(refusal) }
       end
-
-      it "does not restart exhausted bind retries when called from a search" do
-        expect(Net::LDAP).to receive(:new).exactly(3).times.and_return(ldap)
-        expect(ldap).to receive(:bind).exactly(3).times.and_raise(refusal)
-        expect(ldap).not_to receive(:search)
-        expect(logger).to receive(:warn).twice
-        expect(logger).to receive(:error).once
-        expect(subject).to receive(:sleep).with(1).ordered
-        expect(subject).to receive(:sleep).with(2).ordered
-
-        expect { subject.search(base: dn1) }.to raise_error { |error| expect(error).to equal(refusal) }
-      end
     end
 
     [
@@ -203,17 +191,6 @@ describe Entitlements::Service::LDAP do
         expect(Net::LDAP).to receive(:new).once.and_return(ldap)
         expect(ldap).to receive(:bind).once.and_return(true)
         allow(ldap).to receive(:get_operation_result).and_return(OpenStruct.new(code: 0))
-      end
-
-      [Errno::ECONNREFUSED, Errno::ECONNRESET].each do |error_class|
-        it "retries #{error_class} during a search" do
-          expect(ldap).to receive(:search).ordered.and_raise(error_class)
-          expect(ldap).to receive(:search).ordered.and_return(true)
-          expect(logger).to receive(:warn).with(/attempt 1 of 3.*Retrying in 1s/)
-          expect(subject).to receive(:sleep).with(1)
-
-          expect(subject.search(base: dn1)).to eq({})
-        end
       end
 
       it "does not retry a refused modification" do
@@ -271,7 +248,7 @@ describe Entitlements::Service::LDAP do
       end
 
       before do
-        expect(subject).to receive(:ldap).once.and_return(ldap)
+        allow(subject).to receive(:search_connection).and_return(ldap)
         allow(entry1).to receive(:dn).and_return(dn1)
         allow(entry2).to receive(:dn).and_return(dn2)
       end
@@ -291,6 +268,17 @@ describe Entitlements::Service::LDAP do
           expect(subject).to receive(:sleep).with(1)
 
           expect(subject.search(base: dn1)).to eq(dn1 => entry1)
+        end
+      end
+
+      [Errno::ECONNREFUSED, Errno::ECONNRESET].each do |error_class|
+        it "retries #{error_class} during a search" do
+          expect(ldap).to receive(:search).ordered.and_raise(error_class)
+          expect(ldap).to receive(:search).ordered.and_return(true)
+          expect(logger).to receive(:warn).with(/attempt 1 of 3.*Retrying in 1s/)
+          expect(subject).to receive(:sleep).with(1)
+
+          expect(subject.search(base: dn1)).to eq({})
         end
       end
 
@@ -331,7 +319,7 @@ describe Entitlements::Service::LDAP do
 
     it "raises a duplicate entry error if the same index key is reassigned" do
       filter = Net::LDAP::Filter.eq("manager", "uid=evilbacon,ou=People,dc=example,dc=net")
-      expect(subject).to receive(:ldap).and_return(ldap)
+      expect(subject).to receive(:search_connection).and_return(ldap)
       allow(ldap).to receive(:search)
         .with(
           base: "ou=People,dc=example,dc=net",
@@ -360,7 +348,7 @@ describe Entitlements::Service::LDAP do
 
     it "raises an entry error if the indexed field does not exist in the entry" do
       filter = Net::LDAP::Filter.eq("kittens", "awesome")
-      expect(subject).to receive(:ldap).and_return(ldap)
+      expect(subject).to receive(:search_connection).and_return(ldap)
       expect(ldap).to receive(:search)
         .with(
           base: "ou=People,dc=example,dc=net",
@@ -388,7 +376,7 @@ describe Entitlements::Service::LDAP do
     end
 
     it "returns the result as a Net::LDAP::Entry object searching for a DN" do
-      expect(subject).to receive(:ldap).and_return(ldap)
+      expect(subject).to receive(:search_connection).and_return(ldap)
       expect(logger).to receive(:debug).with(/LDAP Search: filter=nil base="cn=bar,ou=foo,dc=example,dc=net"/)
       expect(logger).to receive(:debug).with(/Completed search: 2 result\(s\)/)
       expect(ldap).to receive(:search).with(
@@ -412,7 +400,7 @@ describe Entitlements::Service::LDAP do
 
     it "returns the result as a Net::LDAP::Entry object searching for a field" do
       filter = Net::LDAP::Filter.eq("manager", "uid=evilbacon,ou=People,dc=example,dc=net")
-      expect(subject).to receive(:ldap).and_return(ldap)
+      expect(subject).to receive(:search_connection).and_return(ldap)
       expect(logger).to receive(:debug).with(/LDAP Search: filter=.+ base="ou=People,dc=example,dc=net"/)
       expect(logger).to receive(:debug).with(/Completed search: 2 result\(s\)/)
       expect(ldap).to receive(:search).with(
@@ -434,10 +422,78 @@ describe Entitlements::Service::LDAP do
     end
   end
 
+  describe "search connections" do
+    let(:connection) { instance_double(Net::LDAP::Connection) }
+    let(:bind_ok) { OpenStruct.new(result_code: Net::LDAP::ResultCodeSuccess) }
+
+    before do
+      allow(Net::LDAP).to receive(:new).and_return(ldap)
+      allow(ldap).to receive(:connection=)
+      allow(Net::LDAP::Connection).to receive(:new)
+        .with(host: "ldap.example.net", port: 636, encryption: { method: :simple_tls, tls_options: { verify_mode: 1 } })
+        .and_return(connection)
+    end
+
+    it "binds once and reuses the connection on the same thread" do
+      expect(connection).to receive(:bind).once.and_return(bind_ok)
+      expect(ldap).to receive(:connection=).with(connection).once
+      expect(ldap).to receive(:search).twice.and_return(true)
+
+      2.times { expect(subject.search(base: dn1)).to eq({}) }
+    end
+
+    it "opens a separate connection for each thread" do
+      expect(connection).to receive(:bind).twice.and_return(bind_ok)
+      expect(ldap).to receive(:search).twice.and_return(true)
+
+      subject.search(base: dn1)
+      Thread.new { subject.search(base: dn1) }.join
+    end
+
+    it "reconnects once when a reused connection fails" do
+      error = Net::LDAP::ResponseMissingOrInvalidError.new("response missing or invalid")
+      expect(connection).to receive(:bind).twice.and_return(bind_ok)
+      expect(connection).to receive(:close).once.and_raise(IOError)
+      expect(ldap).to receive(:search).ordered.and_return(true)
+      expect(ldap).to receive(:search).ordered.and_raise(error)
+      expect(ldap).to receive(:search).ordered.and_yield(entry1).and_return(true)
+      allow(entry1).to receive(:dn).and_return(dn1)
+      expect(subject).not_to receive(:sleep)
+
+      subject.search(base: dn1)
+      expect(subject.search(base: dn1)).to eq(dn1 => entry1)
+    end
+
+    it "does not reconnect when a new connection fails" do
+      error = Net::LDAP::ResponseMissingOrInvalidError.new("response missing or invalid")
+      expect(connection).to receive(:bind).once.and_return(bind_ok)
+      expect(connection).to receive(:close).once
+      expect(ldap).to receive(:search).once.and_raise(error)
+
+      expect { subject.search(base: dn1) }.to raise_error { |raised| expect(raised).to equal(error) }
+    end
+
+    it "raises if the bind fails" do
+      expect(connection).to receive(:bind).and_return(OpenStruct.new(result_code: 49, error_message: ""))
+      expect(connection).to receive(:close)
+      expect(ldap).not_to receive(:search)
+
+      expect { subject.search(base: dn1) }.to raise_error(Entitlements::Service::LDAP::ConnectionError, "FATAL: Invalid Credentials")
+    end
+
+    it "closes the connection if the bind raises" do
+      allow(subject).to receive(:sleep)
+      expect(connection).to receive(:bind).at_least(:once).and_raise(Errno::ECONNRESET)
+      expect(connection).to receive(:close).at_least(:once).and_raise(IOError)
+
+      expect { subject.search(base: dn1) }.to raise_error(Errno::ECONNRESET)
+    end
+  end
+
   describe "#read" do
     it "returns Net::LDAP::Entry if the entry exists" do
       allow(entry1).to receive(:dn).and_return(dn1)
-      expect(subject).to receive(:ldap).and_return(ldap)
+      expect(subject).to receive(:search_connection).and_return(ldap)
       expect(ldap).to receive(:search)
         .with(base: dn1, filter: nil, attributes: "*", scope: Net::LDAP::SearchScope_BaseObject, return_result: false)
         .and_yield(entry1)
@@ -448,7 +504,7 @@ describe Entitlements::Service::LDAP do
     end
 
     it "returns nil if the entry does not exist" do
-      expect(subject).to receive(:ldap).and_return(ldap)
+      expect(subject).to receive(:search_connection).and_return(ldap)
       expect(ldap).to receive(:search)
         .with(base: dn1, filter: nil, attributes: "*", scope: Net::LDAP::SearchScope_BaseObject, return_result: false)
       expect(subject.read(dn1)).to be nil
@@ -461,7 +517,7 @@ describe Entitlements::Service::LDAP do
   describe "#exists?" do
     it "returns true if the entry exists" do
       allow(entry1).to receive(:dn).and_return(dn1)
-      expect(subject).to receive(:ldap).and_return(ldap)
+      expect(subject).to receive(:search_connection).and_return(ldap)
       expect(ldap).to receive(:search)
         .with(base: dn1, filter: nil, attributes: "*", scope: Net::LDAP::SearchScope_BaseObject, return_result: false)
         .and_yield(entry1)
@@ -471,14 +527,14 @@ describe Entitlements::Service::LDAP do
 
     it "returns false if the entry does not exist" do
       allow(entry1).to receive(:dn).and_return(dn1)
-      expect(subject).to receive(:ldap).and_return(ldap)
+      expect(subject).to receive(:search_connection).and_return(ldap)
       expect(ldap).to receive(:search)
         .with(base: dn1, filter: nil, attributes: "*", scope: Net::LDAP::SearchScope_BaseObject, return_result: false)
       expect(subject.exists?(dn1)).to eq(false)
     end
 
     it "reuses the known existence of a successfully searched base" do
-      expect(subject).to receive(:ldap).and_return(ldap)
+      expect(subject).to receive(:search_connection).and_return(ldap)
       expect(ldap).to receive(:search)
         .with(
           base: dn1,
@@ -493,7 +549,7 @@ describe Entitlements::Service::LDAP do
     end
 
     it "does not remember the base of a failed search" do
-      expect(subject).to receive(:ldap).twice.and_return(ldap)
+      expect(subject).to receive(:search_connection).twice.and_return(ldap)
       expect(ldap).to receive(:search)
         .with(
           base: dn1,
@@ -561,6 +617,7 @@ describe Entitlements::Service::LDAP do
     it "invalidates cached existence and reads after a successful delete" do
       operation_result = { "code" => 0, "message" => ":tada:" }
       allow(subject).to receive(:ldap).and_return(ldap)
+      allow(subject).to receive(:search_connection).and_return(ldap)
       allow(existing).to receive(:dn).and_return(dn)
 
       expect(ldap).to receive(:search)
