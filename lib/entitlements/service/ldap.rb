@@ -322,11 +322,17 @@ module Entitlements
         Entitlements.logger.debug "Creating connection to #{options[:host]} port #{options[:port]}"
         connection = Net::LDAP::Connection.new(host: options[:host], port: options[:port], encryption: options[:encryption])
         Entitlements.logger.debug "Binding with user #{binddn.inspect} with simple password authentication"
-        result = connection.bind(options[:auth])
+        begin
+          result = connection.bind(options[:auth])
+        rescue StandardError
+          close_connection(connection)
+          raise
+        end
         unless result.result_code == Net::LDAP::ResultCodeSuccess
-          connection.close
-          Entitlements.logger.fatal result.error_message
-          raise ConnectionError, "FATAL: #{result.error_message}"
+          close_connection(connection)
+          message = Net::LDAP.result2string(result.result_code)
+          Entitlements.logger.fatal message
+          raise ConnectionError, "FATAL: #{message}"
         end
         Entitlements.logger.debug "Successfully authenticated to #{options[:host]} port #{options[:port]}"
 
@@ -338,6 +344,10 @@ module Entitlements
 
       def close_search_connection
         _, connection = @search_connections_mutex.synchronize { @search_connections.delete(Thread.current) }
+        close_connection(connection)
+      end
+
+      def close_connection(connection)
         connection&.close
       rescue IOError, SystemCallError, OpenSSL::SSL::SSLError
         nil

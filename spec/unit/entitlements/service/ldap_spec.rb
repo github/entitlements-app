@@ -474,11 +474,19 @@ describe Entitlements::Service::LDAP do
     end
 
     it "raises if the bind fails" do
-      expect(connection).to receive(:bind).and_return(OpenStruct.new(result_code: 49, error_message: "Invalid credentials"))
+      expect(connection).to receive(:bind).and_return(OpenStruct.new(result_code: 49, error_message: ""))
       expect(connection).to receive(:close)
       expect(ldap).not_to receive(:search)
 
-      expect { subject.search(base: dn1) }.to raise_error(Entitlements::Service::LDAP::ConnectionError, "FATAL: Invalid credentials")
+      expect { subject.search(base: dn1) }.to raise_error(Entitlements::Service::LDAP::ConnectionError, "FATAL: Invalid Credentials")
+    end
+
+    it "closes the connection if the bind raises" do
+      allow(subject).to receive(:sleep)
+      expect(connection).to receive(:bind).at_least(:once).and_raise(Errno::ECONNRESET)
+      expect(connection).to receive(:close).at_least(:once).and_raise(IOError)
+
+      expect { subject.search(base: dn1) }.to raise_error(Errno::ECONNRESET)
     end
   end
 
