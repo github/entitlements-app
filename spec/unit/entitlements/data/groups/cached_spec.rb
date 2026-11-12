@@ -75,7 +75,7 @@ describe Entitlements::Data::Groups::Cached do
       it "populates an entry in :by_dn with the correct members" do
         described_class.load_caches(dir)
 
-        answer = { members: Set.new(%w[korat russianblue]), metadata: { "team_id" => "9", "team_name" => "team_name" } }
+        answer = { members: Set.new(%w[korat russianblue]), metadata: { "team_id" => "9", "team_name" => "team_name", "team_maintainers" => "", "note" => "a=b" } }
         expect(cache[:predictive_state][:by_dn]["cn=cheese,ou=Pizza_Teams,dc=kittens,dc=net"]).to eq(answer)
       end
 
