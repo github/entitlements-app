@@ -19,7 +19,7 @@ Gem::Specification.new do |s|
   s.add_dependency "concurrent-ruby", "~> 1.3", ">= 1.3.1"
   s.add_dependency "dogstatsd-ruby", "~> 5.7"
   s.add_dependency "faraday", "~> 2.0"
-  s.add_dependency "net-ldap", "~> 0.19"
+  s.add_dependency "net-ldap", "~> 0.21"
   s.add_dependency "octokit", "~> 4.18"
   s.add_dependency "optimist", "~> 3.1"
   s.add_dependency "ostruct", "~> 0.6.0"
