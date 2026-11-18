@@ -75,7 +75,7 @@ We take security very seriously. Please see [SECURITY](SECURITY.md) for details 
 To release a new version of this Gem, do the following:
 
 1. Update the version number in the [`lib/version.rb`](lib/version.rb) file
-2. Run `bundle install` to update the `Gemfile.lock` file with the new version
+2. Run `bundle install` with the Bundler version pinned in `spec/acceptance/Dockerfile.entitlements-app` to update `Gemfile.lock` for the new version.
 3. Commit your changes, push them to GitHub, and open a PR
 
 Once your PR is approved and the changes are merged, a new release will be created automatically by the [`release.yml`](.github/workflows/release.yml) workflow. The latest version of the Gem will be published to the GitHub Package Registry and RubyGems.
